@@ -134,17 +134,45 @@ export function detectCircuitErrors(circuit: Circuit): ErrorDetectionResult {
 function checkHasResistorInPath(ledId: string, circuit: Circuit): boolean {
   const led = circuit.components[ledId];
   if (!led) return true;
-  // Walk connected wires and check if a resistor is present
-  for (const pin of led.pins) {
-    for (const wireId of pin.connectedWireIds) {
-      const wire = circuit.wires[wireId];
-      if (!wire) continue;
-      const otherId = wire.fromComponentId === ledId ? wire.toComponentId : wire.fromComponentId;
-      if (!otherId) continue;
-      const other = circuit.components[otherId];
-      if (!other) continue;
-      if (other.type === 'resistor' || other.type === 'potentiometer') return true;
+
+  // BFS from LED through the connected circuit — look for a resistor within 4 hops
+  const visited = new Set<string>([ledId]);
+  const queue: Array<{ compId: string; depth: number }> = [{ compId: ledId, depth: 0 }];
+  const MAX_DEPTH = 4;
+
+  while (queue.length > 0) {
+    const { compId, depth } = queue.shift()!;
+    if (depth > MAX_DEPTH) continue;
+
+    const comp = circuit.components[compId];
+    if (!comp) continue;
+
+    // Walk all wires from this component
+    for (const pin of comp.pins) {
+      for (const wireId of pin.connectedWireIds) {
+        const wire = circuit.wires[wireId];
+        if (!wire) continue;
+        const otherId = wire.fromComponentId === compId ? wire.toComponentId : wire.fromComponentId;
+        if (!otherId || visited.has(otherId)) continue;
+        visited.add(otherId);
+
+        const other = circuit.components[otherId];
+        if (!other) continue;
+
+        // Found a current-limiting element
+        if (other.type === 'resistor' || other.type === 'potentiometer' || other.type === 'fuse') {
+          return true;
+        }
+
+        // Voltage sources / ground are endpoints — don't traverse further
+        if (other.type === 'ground' || other.type === 'dc_source' || other.type === 'battery' || other.type === 'vcc') {
+          continue;
+        }
+
+        queue.push({ compId: otherId, depth: depth + 1 });
+      }
     }
   }
+
   return false;
 }

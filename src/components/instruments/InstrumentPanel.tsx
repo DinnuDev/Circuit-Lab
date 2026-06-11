@@ -109,11 +109,17 @@ function Multimeter() {
 function Oscilloscope() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simResult = useCircuitStore(s => s.simulationResult);
-  const [timebase, setTimebase] = useState(0.001); // 1ms/div
+  const circuit = useCircuitStore(s => s.circuit);
+  const [timebase, setTimebase] = useState(0.001);
+  const [vdiv, setVdiv] = useState(5);
 
-  // Generate waveform data
   const nodeVoltages = simResult?.nodeVoltages ?? {};
-  const maxV = Math.max(...Object.values(nodeVoltages).map(Math.abs), 1);
+  const transientData = simResult?.transientData;
+  const timePoints = simResult?.timePoints;
+  const hasTransient = transientData && timePoints && timePoints.length > 1;
+
+  // Determine max voltage for Y scaling
+  const maxV = Math.max(...Object.values(nodeVoltages).map(Math.abs), vdiv);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -129,65 +135,72 @@ function Oscilloscope() {
     // Grid
     ctx.strokeStyle = '#0a2a0a';
     ctx.lineWidth = 1;
-    const gridCols = 10;
-    const gridRows = 8;
+    const gridCols = 10, gridRows = 8;
     for (let i = 0; i <= gridCols; i++) {
-      ctx.beginPath();
-      ctx.moveTo((i / gridCols) * w, 0);
-      ctx.lineTo((i / gridCols) * w, h);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo((i / gridCols) * w, 0); ctx.lineTo((i / gridCols) * w, h); ctx.stroke();
     }
     for (let i = 0; i <= gridRows; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, (i / gridRows) * h);
-      ctx.lineTo(w, (i / gridRows) * h);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, (i / gridRows) * h); ctx.lineTo(w, (i / gridRows) * h); ctx.stroke();
     }
-
-    // Draw signals for each non-ground node
-    const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#a78bfa'];
-    Object.entries(nodeVoltages).slice(0, 4).forEach(([nodeId, voltage], idx) => {
-      if (Math.abs(voltage) < 0.001) return;
-      const color = colors[idx];
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-
-      // Simple sinusoidal representation for visualization
-      for (let x = 0; x < w; x++) {
-        const t = x / w;
-        const y = h / 2 - (voltage / maxV) * (h / 2 - 10) * Math.cos(t * Math.PI * 2);
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-
-      // Label
-      ctx.fillStyle = color;
-      ctx.font = '9px monospace';
-      ctx.fillText(`${nodeId}: ${voltage.toFixed(2)}V`, 4, 12 + idx * 12);
-    });
-
-    // Time axis
+    // Center line
     ctx.strokeStyle = '#1a4a1a';
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, h / 2);
-    ctx.lineTo(w, h / 2);
-    ctx.stroke();
-  }, [simResult, nodeVoltages, maxV]);
+    ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+
+    const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#a78bfa'];
+
+    if (hasTransient) {
+      // Draw real transient data
+      const nonGndNodes = Object.keys(transientData).slice(0, 4);
+      nonGndNodes.forEach((nodeId, idx) => {
+        const data = transientData[nodeId];
+        if (!data || data.length < 2) return;
+        const color = colors[idx];
+        ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        data.forEach((v, i) => {
+          const x = (i / (data.length - 1)) * w;
+          const y = h / 2 - (v / maxV) * (h / 2 - 8);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.fillStyle = color; ctx.font = '9px monospace';
+        ctx.fillText(`${nodeId}`, 4, 12 + idx * 12);
+      });
+    } else {
+      // Fallback: synthesize waveforms from DC node voltages
+      // For AC sources show sine; for DC sources show flat line
+      const hasAC = Object.values(circuit.components).some(c => c.type === 'ac_source');
+      Object.entries(nodeVoltages).slice(0, 4).forEach(([nodeId, voltage], idx) => {
+        if (Math.abs(voltage) < 0.001) return;
+        const color = colors[idx];
+        ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = 0; x < w; x++) {
+          const t = (x / w) * 4 * Math.PI;
+          const v = hasAC ? voltage * Math.sin(t) : voltage;
+          const y = h / 2 - (v / maxV) * (h / 2 - 8);
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.fillStyle = color; ctx.font = '9px monospace';
+        ctx.fillText(`${nodeId}: ${voltage.toFixed(2)}V`, 4, 12 + idx * 12);
+      });
+    }
+  }, [simResult, nodeVoltages, maxV, hasTransient, transientData, circuit.components]);
 
   return (
     <div className="p-3">
+      {hasTransient && (
+        <div className="mb-2 text-xs text-green-500 font-semibold flex items-center gap-1">
+          <span>●</span> Live transient data
+        </div>
+      )}
       <canvas ref={canvasRef} width={240} height={160} className="w-full rounded border border-[#1a3a1a]" />
       <div className="mt-2 grid grid-cols-2 gap-2">
         <div>
           <p className="text-xs text-gray-600 mb-1">Timebase</p>
-          <select
-            value={timebase}
-            onChange={e => setTimebase(parseFloat(e.target.value))}
-            className="prop-input text-xs"
-          >
+          <select value={timebase} onChange={e => setTimebase(parseFloat(e.target.value))} className="prop-input text-xs">
             <option value={0.0001}>0.1ms/div</option>
             <option value={0.001}>1ms/div</option>
             <option value={0.01}>10ms/div</option>
@@ -196,11 +209,12 @@ function Oscilloscope() {
         </div>
         <div>
           <p className="text-xs text-gray-600 mb-1">V/div</p>
-          <select className="prop-input text-xs">
-            <option>1V/div</option>
+          <select value={vdiv} onChange={e => setVdiv(Number(e.target.value))} className="prop-input text-xs">
+            <option value={1}>1V/div</option>
             <option>2V/div</option>
-            <option>5V/div</option>
-            <option>10V/div</option>
+            <option value={2}>2V/div</option>
+            <option value={5}>5V/div</option>
+            <option value={10}>10V/div</option>
           </select>
         </div>
       </div>

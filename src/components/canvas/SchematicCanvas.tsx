@@ -284,6 +284,8 @@ export default function SchematicCanvas() {
       if (e.ctrlKey && e.key === 'y') { e.preventDefault(); useCircuitStore.getState().redo(); }
       if (e.ctrlKey && e.key === 'd') { e.preventDefault(); useCircuitStore.getState().duplicateSelected(); }
       if (e.ctrlKey && e.key === 'a') { e.preventDefault(); useCircuitStore.getState().selectAll(); }
+      if (e.ctrlKey && e.shiftKey && e.key === 'F') { e.preventDefault(); useCircuitStore.getState().fitToContent(); }
+      if (e.key === '0' && e.ctrlKey) { e.preventDefault(); useCircuitStore.getState().resetView(); }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         useCircuitStore.getState().deleteSelected();
       }

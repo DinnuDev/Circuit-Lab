@@ -11,6 +11,24 @@ export interface ChatMessage {
   isLoading?: boolean;
 }
 
+// API key in sessionStorage (not Zustand state) — cleared on tab close
+const SESSION_KEY = 'circuit_ai_key';
+const getStoredKey = () => {
+  try { return sessionStorage.getItem(SESSION_KEY) ?? ''; } catch { return ''; }
+};
+const storeKey = (k: string) => {
+  try { if (k) sessionStorage.setItem(SESSION_KEY, k); else sessionStorage.removeItem(SESSION_KEY); } catch {}
+};
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  text: string;
+  timestamp: number;
+  response?: AIResponse;
+  isLoading?: boolean;
+}
+
 interface AIStore {
   messages: ChatMessage[];
   apiKey: string;
@@ -45,11 +63,14 @@ Type **help** to see all available templates, or provide an OpenAI API key above
 export const useAIStore = create<AIStore>()(
   immer(set => ({
     messages: [WELCOME],
-    apiKey: '',
+    apiKey: getStoredKey(),   // Initialized from sessionStorage
     aiPanelOpen: false,
     isProcessing: false,
 
-    setApiKey: (key) => set(s => { s.apiKey = key; }),
+    setApiKey: (key) => {
+      storeKey(key);
+      set(s => { s.apiKey = key; });
+    },
     setAIPanelOpen: (open) => set(s => { s.aiPanelOpen = open; }),
     toggleAIPanel: () => set(s => { s.aiPanelOpen = !s.aiPanelOpen; }),
     addMessage: (msg) => set(s => { s.messages.push(msg); }),

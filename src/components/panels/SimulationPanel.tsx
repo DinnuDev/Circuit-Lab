@@ -1,6 +1,6 @@
 import { useCircuitStore } from '@/store/circuitStore';
 import { useUIStore } from '@/store/uiStore';
-import { runDCSimulation, runACSimulation } from '@/simulation/engine';
+import { runDCSimulation, runACSimulation, runTransientSimulation } from '@/simulation/engine';
 import { Play, Square, Activity } from 'lucide-react';
 
 export default function SimulationPanel() {
@@ -13,10 +13,8 @@ export default function SimulationPanel() {
     try {
       let targetCircuit = circuit;
       if (selectionOnly && hasSelection) {
-        // Build a sub-circuit with only selected components + wires between them
         const selectedIds = new Set(selection.componentIds);
         const selectedWireIds = new Set(selection.wireIds);
-        // Also include wires that connect two selected components
         Object.values(circuit.wires).forEach(w => {
           if (w.fromComponentId && selectedIds.has(w.fromComponentId) &&
               w.toComponentId && selectedIds.has(w.toComponentId)) {
@@ -32,8 +30,9 @@ export default function SimulationPanel() {
 
       let result;
       switch (simulationMode) {
-        case 'ac': result = runACSimulation(targetCircuit, 1000); break;
-        default:   result = runDCSimulation(targetCircuit);
+        case 'ac':        result = runACSimulation(targetCircuit, 1000); break;
+        case 'transient': result = runTransientSimulation(targetCircuit, 0.02, 0.0002); break;
+        default:          result = runDCSimulation(targetCircuit);
       }
       setSimulationResult(result);
     } catch (err) {

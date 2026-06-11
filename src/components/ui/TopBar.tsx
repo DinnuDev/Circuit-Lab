@@ -6,7 +6,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, Grid, Play, Square,
   PanelLeft, PanelRight, Cpu, Layers,
   Monitor, SplitSquareHorizontal, Layout, Save, FolderOpen,
-  Undo2, Redo2, Sparkles, Activity, ChevronsLeft, ChevronsRight,
+  Undo2, Redo2, Sparkles, Activity, ChevronsLeft, ChevronsRight, Maximize2,
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -124,6 +124,7 @@ export default function TopBar() {
       <IconButton onClick={() => useCircuitStore.getState().zoomIn()} title="Zoom In"><ZoomIn size={15} /></IconButton>
       <IconButton onClick={() => useCircuitStore.getState().zoomOut()} title="Zoom Out"><ZoomOut size={15} /></IconButton>
       <IconButton onClick={() => useCircuitStore.getState().resetView()} title="Reset View (Ctrl+0)"><RotateCcw size={15} /></IconButton>
+      <IconButton onClick={() => useCircuitStore.getState().fitToContent()} title="Fit to Content (Ctrl+Shift+F)"><Maximize2 size={15} /></IconButton>
 
       <Divider />
 

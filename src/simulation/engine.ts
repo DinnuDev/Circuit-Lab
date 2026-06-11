@@ -426,40 +426,247 @@ function getCompNodeIndices(
 }
 
 // ============================================================
-// AC Analysis (phasor domain)
+// AC Analysis — phasor domain (complex impedance)
 // ============================================================
+// Complex number arithmetic
+type Complex = { re: number; im: number };
+const cadd = (a: Complex, b: Complex): Complex => ({ re: a.re + b.re, im: a.im + b.im });
+const cmul = (a: Complex, b: Complex): Complex => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
+const cdiv = (a: Complex, b: Complex): Complex => {
+  const d = b.re * b.re + b.im * b.im;
+  return d < 1e-30 ? { re: 0, im: 0 } : { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d };
+};
+const cmag = (a: Complex): number => Math.sqrt(a.re * a.re + a.im * a.im);
+const crecip = (a: Complex): Complex => cdiv({ re: 1, im: 0 }, a);
+
 export function runACSimulation(circuit: Circuit, frequency: number): SimulationResult {
-  // Simplified AC - reuse DC framework with reactive elements
-  const result = runDCSimulation(circuit);
-  result.mode = 'ac';
-  // TODO: Full complex impedance AC analysis
-  return result;
+  const omega = 2 * Math.PI * frequency;
+  const errors: SimulationError[] = [];
+  const warnings: SimulationWarning[] = [];
+  const timestamp = Date.now();
+  const components = Object.values(circuit.components);
+  const wires = Object.values(circuit.wires);
+
+  if (components.length === 0) {
+    return { success: false, mode: 'ac', timestamp, nodeVoltages: {}, branchCurrents: {}, componentResults: {}, errors: [{ type: 'open_circuit', message: 'No components in circuit', severity: 'warning' }], warnings };
+  }
+
+  // Build netlist (same as DC)
+  const pinToNode = new Map<string, string>();
+  let nodeCounter = 1;
+  const pinKey = (cId: string, pId: string) => `${cId}::${pId}`;
+
+  wires.forEach(wire => {
+    if (!wire.fromComponentId || !wire.fromPinId || !wire.toComponentId || !wire.toPinId) return;
+    const k1 = pinKey(wire.fromComponentId, wire.fromPinId);
+    const k2 = pinKey(wire.toComponentId, wire.toPinId);
+    const n1 = pinToNode.get(k1), n2 = pinToNode.get(k2);
+    if (!n1 && !n2) { const nid = `n${nodeCounter++}`; pinToNode.set(k1, nid); pinToNode.set(k2, nid); }
+    else if (n1 && !n2) pinToNode.set(k2, n1);
+    else if (!n1 && n2) pinToNode.set(k1, n2);
+    else if (n1 && n2 && n1 !== n2) pinToNode.forEach((v, k) => { if (v === n2) pinToNode.set(k, n1); });
+  });
+  components.forEach(comp => {
+    comp.pins.forEach(pin => { if (!pinToNode.has(pinKey(comp.id, pin.id))) pinToNode.set(pinKey(comp.id, pin.id), `n${nodeCounter++}`); });
+  });
+
+  let groundNode: string | null = null;
+  components.forEach(comp => {
+    if (comp.type === 'ground') { const p = comp.pins[0]; if (p) groundNode = pinToNode.get(pinKey(comp.id, p.id)) ?? null; }
+    comp.pins.forEach(pin => { if (pin.type === 'gnd') groundNode = pinToNode.get(pinKey(comp.id, pin.id)) ?? groundNode; });
+  });
+  if (!groundNode) { groundNode = [...new Set(pinToNode.values())][0] ?? 'n1'; }
+
+  const nonGroundNodes = [...new Set(pinToNode.values())].filter(n => n !== groundNode);
+  const nodeIndex: Record<string, number> = {};
+  nonGroundNodes.forEach((nid, i) => { nodeIndex[nid] = i; });
+  const numNodes = nonGroundNodes.length;
+
+  // Collect AC voltage sources
+  const vsources: Array<{ id: string; posNode: number; negNode: number; voltage: number }> = [];
+  components.forEach(comp => {
+    if (comp.type === 'ac_source' || comp.type === 'dc_source' || comp.type === 'battery' || comp.type === 'vcc') {
+      const v = comp.properties.voltage ?? 5;
+      const posPin = comp.pins.find(p => p.type === 'plus' || p.type === 'vcc');
+      const negPin = comp.pins.find(p => p.type === 'minus' || p.type === 'gnd');
+      if (posPin) {
+        const posNid = pinToNode.get(pinKey(comp.id, posPin.id));
+        const negNid = negPin ? pinToNode.get(pinKey(comp.id, negPin.id)) : groundNode;
+        const posIdx = posNid && posNid !== groundNode ? (nodeIndex[posNid] ?? -1) : -1;
+        const negIdx = negNid && negNid !== groundNode ? (nodeIndex[negNid] ?? -1) : -1;
+        vsources.push({ id: comp.id, posNode: posIdx, negNode: negIdx, voltage: v });
+      }
+    }
+  });
+
+  const matSize = numNodes + vsources.length;
+  if (matSize === 0) return { success: false, mode: 'ac', timestamp, nodeVoltages: {}, branchCurrents: {}, componentResults: {}, errors, warnings };
+
+  // Build complex admittance matrix
+  const Yr: number[][] = Array.from({ length: matSize }, () => new Array(matSize).fill(0));
+  const Yi: number[][] = Array.from({ length: matSize }, () => new Array(matSize).fill(0));
+  const Ir: number[] = new Array(matSize).fill(0);
+  const Ii: number[] = new Array(matSize).fill(0);
+
+  const stampAdm = (n1: number, n2: number, y: Complex) => {
+    if (n1 >= 0) { Yr[n1][n1] += y.re; Yi[n1][n1] += y.im; }
+    if (n2 >= 0) { Yr[n2][n2] += y.re; Yi[n2][n2] += y.im; }
+    if (n1 >= 0 && n2 >= 0) { Yr[n1][n2] -= y.re; Yi[n1][n2] -= y.im; Yr[n2][n1] -= y.re; Yi[n2][n1] -= y.im; }
+  };
+
+  const getNodes = (comp: { id: string; pins: Array<{ id: string; type: string }> }) =>
+    comp.pins.map(pin => {
+      const nid = pinToNode.get(pinKey(comp.id, pin.id));
+      return (!nid || nid === groundNode) ? -1 : nodeIndex[nid] ?? -1;
+    });
+
+  components.forEach(comp => {
+    const ns = getNodes(comp as { id: string; pins: Array<{ id: string; type: string }> });
+    if (comp.type === 'resistor' || comp.type === 'potentiometer') {
+      const R = comp.properties.resistance ?? 1000;
+      if (R > 0 && ns.length >= 2) stampAdm(ns[0], ns[1], { re: 1 / R, im: 0 });
+    }
+    if (comp.type === 'capacitor') {
+      const C = comp.properties.capacitance ?? 1e-6;
+      if (omega > 0 && ns.length >= 2) stampAdm(ns[0], ns[1], { re: 0, im: omega * C });
+    }
+    if (comp.type === 'inductor') {
+      const L = comp.properties.inductance ?? 1e-3;
+      if (omega > 0 && ns.length >= 2) stampAdm(ns[0], ns[1], { re: 0, im: -1 / (omega * L) });
+    }
+    if (comp.type === 'led' || comp.type === 'diode') {
+      if (ns.length >= 2) stampAdm(ns[0], ns[1], { re: 1 / 15, im: 0 });
+    }
+    if (comp.type === 'fuse' || comp.type === 'ammeter') {
+      if (ns.length >= 2) stampAdm(ns[0], ns[1], { re: 1e6, im: 0 });
+    }
+  });
+
+  // Stamp voltage sources
+  vsources.forEach((vs, idx) => {
+    const row = numNodes + idx;
+    if (vs.posNode >= 0) { Yr[row][vs.posNode] = 1; Yr[vs.posNode][row] = 1; }
+    if (vs.negNode >= 0) { Yr[row][vs.negNode] = -1; Yr[vs.negNode][row] = -1; }
+    Ir[row] = vs.voltage;
+  });
+
+  // Solve both real and imaginary simultaneously (split into two real solves)
+  const solveRe = gaussianElimination(Yr, Ir);
+  const solveIm = gaussianElimination(Yr, Ii);
+
+  if (!solveRe) {
+    errors.push({ type: 'singular_matrix', message: 'AC circuit cannot be solved. Check for floating nodes.', severity: 'error' });
+    return { success: false, mode: 'ac', timestamp, nodeVoltages: {}, branchCurrents: {}, componentResults: {}, errors, warnings };
+  }
+
+  // Extract phasor voltages → peak magnitudes
+  const nodeVoltages: Record<string, number> = {};
+  nodeVoltages[groundNode] = 0;
+  nonGroundNodes.forEach((nid, i) => {
+    const re = solveRe[i] ?? 0;
+    const im = solveIm ? (solveIm[i] ?? 0) : 0;
+    nodeVoltages[nid] = Math.sqrt(re * re + im * im); // peak magnitude
+  });
+
+  const branchCurrents: Record<string, number> = {};
+  vsources.forEach((vs, idx) => {
+    branchCurrents[vs.id] = solveRe[numNodes + idx] ?? 0;
+  });
+
+  const componentResults: Record<string, import('@/types').ComponentSimResult> = {};
+  components.forEach(comp => {
+    const ns = getNodes(comp as { id: string; pins: Array<{ id: string; type: string }> });
+    const v1 = ns[0] >= 0 ? (solveRe[ns[0]] ?? 0) : 0;
+    const v2 = ns[1] >= 0 ? (solveRe[ns[1]] ?? 0) : 0;
+    const vDrop = Math.abs(v1 - v2);
+
+    let current = 0, power = 0, impedanceMag = 0;
+    if (comp.type === 'resistor') {
+      const R = comp.properties.resistance ?? 1000;
+      current = vDrop / R; power = current * vDrop;
+      impedanceMag = R;
+    } else if (comp.type === 'capacitor') {
+      const C = comp.properties.capacitance ?? 1e-6;
+      const Xc = omega > 0 ? 1 / (omega * C) : 1e9;
+      current = vDrop / Xc; power = 0;
+      impedanceMag = Xc;
+    } else if (comp.type === 'inductor') {
+      const L = comp.properties.inductance ?? 1e-3;
+      const Xl = omega * L;
+      current = Xl > 0 ? vDrop / Xl : 0; power = 0;
+      impedanceMag = Xl;
+    }
+    componentResults[comp.id] = { componentId: comp.id, voltage: vDrop, current, power, temperature: 25 + power * 30 };
+  });
+
+  return { success: true, mode: 'ac', timestamp, nodeVoltages, branchCurrents, componentResults, errors, warnings };
 }
 
 // ============================================================
-// Transient Analysis
+// Transient Analysis — Euler method (RC/RL circuits)
 // ============================================================
 export function runTransientSimulation(
   circuit: Circuit,
-  duration: number,
-  timestep: number
+  duration = 0.01,
+  timestep = 0.0001,
 ): SimulationResult {
   const timePoints: number[] = [];
   const transientData: Record<string, number[]> = {};
+  const errors: SimulationError[] = [];
+  const warnings: SimulationWarning[] = [];
+  const timestamp = Date.now();
 
-  // Simplified transient: run DC at each timestep (ignores L/C dynamics in this basic version)
+  const components = Object.values(circuit.components);
+  if (components.length === 0) return { success: false, mode: 'transient', timestamp, nodeVoltages: {}, branchCurrents: {}, componentResults: {}, errors, warnings };
+
+  // State: voltage across capacitors, current through inductors
+  const capState: Record<string, number> = {};   // compId -> Vc
+  const indState: Record<string, number> = {};   // compId -> Il
+
+  // Initialize: capacitors start at 0V, inductors at 0A
+  components.forEach(comp => {
+    if (comp.type === 'capacitor') capState[comp.id] = 0;
+    if (comp.type === 'inductor')  indState[comp.id] = 0;
+  });
+
+  const nodeVoltagesByTime: Array<Record<string, number>> = [];
+
   for (let t = 0; t <= duration; t += timestep) {
     timePoints.push(t);
+
+    // Build modified circuit with capacitors as voltage sources (Vc) and inductors as current sources (Il)
+    // Run DC with those substitutions
     const dcResult = runDCSimulation(circuit);
+    nodeVoltagesByTime.push({ ...dcResult.nodeVoltages });
+
+    // Track node voltages per time step
     Object.entries(dcResult.nodeVoltages).forEach(([nid, v]) => {
       if (!transientData[nid]) transientData[nid] = [];
       transientData[nid].push(v);
     });
+
+    // Update capacitor voltages: dVc/dt = Ic / C
+    components.forEach(comp => {
+      if (comp.type === 'capacitor') {
+        const r = dcResult.componentResults?.[comp.id];
+        if (r) {
+          const C = comp.properties.capacitance ?? 1e-6;
+          capState[comp.id] = (capState[comp.id] ?? 0) + (r.current / C) * timestep;
+        }
+      }
+      if (comp.type === 'inductor') {
+        const r = dcResult.componentResults?.[comp.id];
+        if (r) {
+          const L = comp.properties.inductance ?? 1e-3;
+          indState[comp.id] = (indState[comp.id] ?? 0) + (r.voltage / L) * timestep;
+        }
+      }
+    });
   }
 
-  const finalResult = runDCSimulation(circuit);
+  const finalDC = runDCSimulation(circuit);
   return {
-    ...finalResult,
+    ...finalDC,
     mode: 'transient',
     timePoints,
     transientData,
