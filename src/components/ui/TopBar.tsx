@@ -1,11 +1,12 @@
 import { useCircuitStore } from '@/store/circuitStore';
 import { useUIStore } from '@/store/uiStore';
+import { useAIStore } from '@/store/aiStore';
 import { runDCSimulation } from '@/simulation/engine';
 import {
   ZoomIn, ZoomOut, RotateCcw, Grid, Play, Square,
   PanelLeft, PanelRight, Cpu, Layers,
   Monitor, SplitSquareHorizontal, Layout, Save, FolderOpen,
-  Undo2, Redo2, Download, Settings, Activity
+  Undo2, Redo2, Sparkles, Activity
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -19,6 +20,7 @@ export default function TopBar() {
     sidebarOpen, setSidebarOpen,
     propertiesPanelOpen, setPropertiesPanelOpen,
   } = useUIStore();
+  const { toggleAIPanel, aiPanelOpen } = useAIStore();
 
   const handleRunSimulation = () => {
     setSimulationRunning(true);
@@ -155,6 +157,23 @@ export default function TopBar() {
       {/* Panel toggles */}
       <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} active={sidebarOpen} title="Toggle Component Library"><PanelLeft size={15} /></IconButton>
       <IconButton onClick={() => setPropertiesPanelOpen(!propertiesPanelOpen)} active={propertiesPanelOpen} title="Toggle Properties Panel"><PanelRight size={15} /></IconButton>
+
+      <Divider />
+
+      {/* AI button */}
+      <button
+        onClick={toggleAIPanel}
+        title="Circuit AI Assistant"
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+          aiPanelOpen
+            ? 'bg-violet-500/20 text-violet-300 border border-violet-500/40'
+            : 'text-gray-400 hover:text-violet-300 hover:bg-violet-500/10 border border-transparent'
+        }`}
+        style={{ boxShadow: aiPanelOpen ? '0 0 12px rgba(139,92,246,0.2)' : 'none' }}
+      >
+        <Sparkles size={13} />
+        <span>AI</span>
+      </button>
     </header>
   );
 }

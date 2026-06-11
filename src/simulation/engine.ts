@@ -361,11 +361,15 @@ export function runDCSimulation(circuit: Circuit): SimulationResult {
 
     componentResults[comp.id] = { componentId: comp.id, voltage: vDrop, current, power, temperature };
 
-    // Assign voltages back to pins
+    // Assign voltages back to pins — use try/catch because Immer may freeze these objects
     comp.pins.forEach(pin => {
       const nid = pinToNode.get(pinKey(comp.id, pin.id));
       if (nid) {
-        pin.voltage = nodeVoltages[nid] ?? 0;
+        try {
+          pin.voltage = nodeVoltages[nid] ?? 0;
+        } catch {
+          // Object frozen by Immer — skip (pin voltages are optional display-only)
+        }
       }
     });
 

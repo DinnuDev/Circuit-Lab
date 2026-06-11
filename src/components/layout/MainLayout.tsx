@@ -1,5 +1,6 @@
 import { useUIStore } from '@/store/uiStore';
 import { useCircuitStore } from '@/store/circuitStore';
+import { useAIStore } from '@/store/aiStore';
 import TopBar from '@/components/ui/TopBar';
 import ComponentLibraryPanel from '@/components/toolbar/ComponentLibraryPanel';
 import PropertiesPanel from '@/components/panels/PropertiesPanel';
@@ -11,9 +12,11 @@ import StatusBar from '@/components/ui/StatusBar';
 import ErrorPanel from '@/components/panels/ErrorPanel';
 import SimulationPanel from '@/components/panels/SimulationPanel';
 import InstrumentPanel from '@/components/instruments/InstrumentPanel';
+import AIAssistant from '@/components/ai/AIAssistant';
 
 export default function MainLayout() {
   const { viewMode, sidebarOpen, propertiesPanelOpen, activeTab } = useUIStore();
+  const { aiPanelOpen } = useAIStore();
 
   const renderCanvas = () => {
     switch (viewMode) {
@@ -62,6 +65,16 @@ export default function MainLayout() {
             <div className="flex-1 overflow-auto">
               {renderRightPanel()}
             </div>
+          </aside>
+        )}
+
+        {/* AI Assistant Panel */}
+        {aiPanelOpen && (
+          <aside
+            className="flex-shrink-0 panel border-l border-violet-900/40 flex flex-col overflow-hidden"
+            style={{ width: 320 }}
+          >
+            <AIAssistant />
           </aside>
         )}
       </div>
