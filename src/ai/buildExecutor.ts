@@ -5,6 +5,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { useCircuitStore } from '@/store/circuitStore';
 import { COMPONENT_DEFINITIONS } from '@/data/componentLibrary';
+import { pinWorldPos, orthogonalRoute } from '@/utils/format';
 import type { BuildResult, BuildAction, WireAction } from './circuitAI';
 import type { ComponentType } from '@/types';
 
@@ -75,19 +76,11 @@ export function applyBuildResult(result: BuildResult): void {
         if (!fromPin || !toPin) return;
 
         // Compute actual world positions from component positions + pin offsets
-        const pinWorld = (comp: typeof fromComp, pin: typeof fromPin) => {
-          const rad = (comp.rotation * Math.PI) / 180;
-          return {
-            x: comp.position.x + pin.position.x * Math.cos(rad) - pin.position.y * Math.sin(rad),
-            y: comp.position.y + pin.position.x * Math.sin(rad) + pin.position.y * Math.cos(rad),
-          };
-        };
-
-        const startPos = pinWorld(fromComp, fromPin);
-        const endPos   = pinWorld(toComp,   toPin);
+        const startPos = pinWorldPos(fromComp.position.x, fromComp.position.y, fromComp.rotation, fromPin.position.x, fromPin.position.y);
+        const endPos   = pinWorldPos(toComp.position.x,   toComp.position.y,   toComp.rotation,   toPin.position.x,   toPin.position.y);
 
         const wireId = stateAfterComps.addWire({
-          segments: [{ start: startPos, end: endPos }],
+          segments: orthogonalRoute(startPos, endPos),
           type: 'copper',
           fromComponentId: fromId,
           fromPinId: fromPin.id,

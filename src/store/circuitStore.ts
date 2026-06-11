@@ -7,7 +7,7 @@ import type {
   SelectionState, DragState,
 } from '@/types';
 import { COMPONENT_DEFINITIONS } from '@/data/componentLibrary';
-import { pinWorldPos, markDirty, markClean } from '@/utils/format';
+import { pinWorldPos, orthogonalRoute, markDirty, markClean } from '@/utils/format';
 
 interface CircuitStore {
   // Current circuit
@@ -206,7 +206,7 @@ export const useCircuitStore = create<CircuitStore>()(
               const otherPin  = otherComp?.pins.find(p => p.id === wire.toPinId);
               if (otherPin) {
                 const otherW = pinWorldPos(otherComp.position.x, otherComp.position.y, otherComp.rotation, otherPin.position.x, otherPin.position.y);
-                wire.segments = [{ start: newPinW, end: otherW }];
+                wire.segments = orthogonalRoute(newPinW, otherW);
                 return;
               }
             }
@@ -219,7 +219,7 @@ export const useCircuitStore = create<CircuitStore>()(
               const otherPin  = otherComp?.pins.find(p => p.id === wire.fromPinId);
               if (otherPin) {
                 const otherW = pinWorldPos(otherComp.position.x, otherComp.position.y, otherComp.rotation, otherPin.position.x, otherPin.position.y);
-                wire.segments = [{ start: otherW, end: newPinW }];
+                wire.segments = orthogonalRoute(otherW, newPinW);
                 return;
               }
             }
@@ -267,7 +267,7 @@ export const useCircuitStore = create<CircuitStore>()(
               if (tc && tPos && tp) toPinW = pinWorldPos(tPos.x, tPos.y, tc.rotation, tp.position.x, tp.position.y);
             }
 
-            if (fromPinW && toPinW) { wire.segments = [{ start: fromPinW, end: toPinW }]; }
+            if (fromPinW && toPinW) { wire.segments = orthogonalRoute(fromPinW, toPinW); }
             else if (fromPinW) { wire.segments[0] = { ...wire.segments[0], start: fromPinW }; }
             else if (toPinW)   { const last = wire.segments.length - 1; wire.segments[last] = { ...wire.segments[last], end: toPinW }; }
           });

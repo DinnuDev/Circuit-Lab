@@ -3,6 +3,7 @@ import { useCircuitStore } from '@/store/circuitStore';
 import { useUIStore } from '@/store/uiStore';
 import { COMPONENT_DEFINITIONS } from '@/data/componentLibrary';
 import { useDragContext } from '@/context/DragContext';
+import { orthogonalRoute } from '@/utils/format';
 import type { Point2D } from '@/types';
 import SchematicComponent from '@/components/schematic/SchematicComponent';
 import WireLayer from '@/components/schematic/WireLayer';
@@ -162,7 +163,7 @@ export default function SchematicCanvas() {
             const dy = ep.pos.y - wy;
             if (Math.sqrt(dx * dx + dy * dy) < 8) {
               const wireId = addWire({
-                segments: [{ start: { x: wx, y: wy }, end: ep.pos }],
+                segments: orthogonalRoute({ x: wx, y: wy }, ep.pos),
                 type: 'copper',
                 fromComponentId: newCompId,
                 fromPinId: newPin.id,
@@ -304,19 +305,23 @@ export default function SchematicCanvas() {
   // ── Pin click — start/end wire drawing ─────────────────────
   const handlePinClick = useCallback((compId: string, pinId: string, pinPos: Point2D) => {
     if (!drawingWire) {
-      // Start drawing
+      // Start drawing — store only the anchor point; cursor is tracked separately
       setDrawingWire({ fromComponentId: compId, fromPinId: pinId, points: [pinPos, pinPos] });
     } else {
-      // End drawing — create wire
+      // End drawing — same pin = cancel
       if (drawingWire.fromComponentId === compId && drawingWire.fromPinId === pinId) {
         setDrawingWire(null);
         return;
       }
+
+      // Build orthogonal segments from anchor → any intermediate waypoints → end pin
+      const allPoints = [...drawingWire.points.slice(0, -1), pinPos];
       const segs = [];
-      const pts = [...drawingWire.points.slice(0, -1), pinPos];
-      for (let i = 0; i < pts.length - 1; i++) {
-        segs.push({ start: pts[i], end: pts[i + 1] });
+      for (let i = 0; i < allPoints.length - 1; i++) {
+        // Route each span orthogonally
+        segs.push(...orthogonalRoute(allPoints[i], allPoints[i + 1]));
       }
+
       const wireId = addWire({
         segments: segs,
         type: 'copper',
@@ -442,16 +447,32 @@ export default function SchematicCanvas() {
             </g>
           ))}
 
-          {/* Wire being drawn */}
-          {drawingWire && drawingWire.points.length >= 2 && (
-            <polyline
-              points={drawingWire.points.map(p => `${p.x},${p.y}`).join(' ')}
-              fill="none" stroke="#3b82f6"
-              strokeWidth={2 / viewport.zoom}
-              strokeDasharray={`${6 / viewport.zoom} ${3 / viewport.zoom}`}
-              strokeLinecap="round"
-            />
-          )}
+          {/* Wire being drawn — orthogonal L-shaped preview */}
+          {drawingWire && drawingWire.points.length >= 2 && (() => {
+            // Build the orthogonal path: start → intermediate waypoints → cursor
+            const allPts = drawingWire.points;
+            const segments = [];
+            for (let i = 0; i < allPts.length - 1; i++) {
+              segments.push(...orthogonalRoute(allPts[i], allPts[i + 1]));
+            }
+            // Convert to a flat point list for the polyline
+            const polyPts = segments.length > 0
+              ? [segments[0].start, ...segments.map(s => s.end)]
+              : allPts;
+            const ptsStr = polyPts.map(p => `${p.x},${p.y}`).join(' ');
+            return (
+              <polyline
+                points={ptsStr}
+                fill="none"
+                stroke="#3b82f6"
+                strokeWidth={2 / viewport.zoom}
+                strokeDasharray={`${6 / viewport.zoom} ${3 / viewport.zoom}`}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+                style={{ pointerEvents: 'none' }}
+              />
+            );
+          })()}
 
           {/* Cursor crosshair while drawing wire */}
           {drawingWire && (

@@ -76,3 +76,30 @@ let _isDirty = false;
 export function markDirty() { _isDirty = true; }
 export function markClean() { _isDirty = false; }
 export function isDirty() { return _isDirty; }
+
+// ── Orthogonal wire routing ───────────────────────────────────
+export interface WireSegment { start: { x: number; y: number }; end: { x: number; y: number }; }
+
+/**
+ * Route a wire from `start` to `end` using only 90° turns.
+ * Returns 1 segment if already horizontal/vertical, otherwise 2 segments (L-shape).
+ * Uses horizontal-first routing by default.
+ */
+export function orthogonalRoute(
+  start: { x: number; y: number },
+  end:   { x: number; y: number },
+): WireSegment[] {
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+
+  // Already axis-aligned — single segment
+  if (dx < 2) return [{ start, end }];
+  if (dy < 2) return [{ start, end }];
+
+  // Two segments: go horizontal first (to target X), then vertical (to target Y)
+  const corner = { x: end.x, y: start.y };
+  return [
+    { start, end: corner },
+    { start: corner, end },
+  ];
+}
