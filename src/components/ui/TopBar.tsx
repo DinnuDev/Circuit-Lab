@@ -6,7 +6,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, Grid, Play, Square,
   PanelLeft, PanelRight, Cpu, Layers,
   Monitor, SplitSquareHorizontal, Layout, Save, FolderOpen,
-  Undo2, Redo2, Sparkles, Activity
+  Undo2, Redo2, Sparkles, Activity, ChevronsLeft, ChevronsRight,
 } from 'lucide-react';
 
 export default function TopBar() {
@@ -17,8 +17,8 @@ export default function TopBar() {
     showCurrentFlow, toggleCurrentFlow,
     showLabels, toggleLabels,
     isSimulationRunning, setSimulationRunning,
-    sidebarOpen, setSidebarOpen,
-    propertiesPanelOpen, setPropertiesPanelOpen,
+    sidebarOpen, sidebarCollapsed, setSidebarOpen, setSidebarCollapsed, toggleSidebarCollapse,
+    propertiesPanelOpen, rightPanelCollapsed, setPropertiesPanelOpen, setRightPanelCollapsed, toggleRightPanelCollapse,
   } = useUIStore();
   const { toggleAIPanel, aiPanelOpen } = useAIStore();
 
@@ -154,9 +154,40 @@ export default function TopBar() {
 
       <Divider />
 
-      {/* Panel toggles */}
-      <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} active={sidebarOpen} title="Toggle Component Library"><PanelLeft size={15} /></IconButton>
-      <IconButton onClick={() => setPropertiesPanelOpen(!propertiesPanelOpen)} active={propertiesPanelOpen} title="Toggle Properties Panel"><PanelRight size={15} /></IconButton>
+      {/* Panel toggles — 3 states: hidden → icon rail → expanded */}
+      <button
+        onClick={toggleSidebarCollapse}
+        title={!sidebarOpen ? 'Show Component Library' : sidebarCollapsed ? 'Expand Component Library' : 'Collapse to icon rail'}
+        className={`p-1.5 rounded transition-colors relative ${
+          sidebarOpen
+            ? sidebarCollapsed
+              ? 'bg-blue-500/10 text-blue-400'
+              : 'bg-blue-500/15 text-blue-400'
+            : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
+        }`}
+      >
+        <PanelLeft size={15} />
+        {sidebarOpen && sidebarCollapsed && (
+          <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-[#12141f]" />
+        )}
+      </button>
+
+      <button
+        onClick={toggleRightPanelCollapse}
+        title={!propertiesPanelOpen ? 'Show Properties Panel' : rightPanelCollapsed ? 'Expand Properties Panel' : 'Collapse to icon rail'}
+        className={`p-1.5 rounded transition-colors relative ${
+          propertiesPanelOpen
+            ? rightPanelCollapsed
+              ? 'bg-blue-500/10 text-blue-400'
+              : 'bg-blue-500/15 text-blue-400'
+            : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
+        }`}
+      >
+        <PanelRight size={15} />
+        {propertiesPanelOpen && rightPanelCollapsed && (
+          <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-blue-500 rounded-full border border-[#12141f]" />
+        )}
+      </button>
 
       <Divider />
 

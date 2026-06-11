@@ -16,7 +16,10 @@ function addRecent(type: string) {
   localStorage.setItem(RECENTLY_USED_KEY, JSON.stringify(r.slice(0, 8)));
 }
 
-export default function ComponentLibraryPanel() {
+export default function ComponentLibraryPanel({ hideHeader, categoryFilter }: {
+  hideHeader?: boolean;
+  categoryFilter?: string;
+} = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['passive', 'power', 'semiconductor'])
@@ -35,11 +38,12 @@ export default function ComponentLibraryPanel() {
   const categorized = useMemo(() => {
     const map: Record<string, ComponentDefinition[]> = {};
     searchResults.forEach(def => {
+      if (categoryFilter && def.category !== categoryFilter) return;
       if (!map[def.category]) map[def.category] = [];
       map[def.category].push(def);
     });
     return map;
-  }, [searchResults]);
+  }, [searchResults, categoryFilter]);
 
   const toggleCategory = (cat: string) => {
     setExpandedCategories(prev => {
@@ -115,7 +119,7 @@ export default function ComponentLibraryPanel() {
 
   return (
     <div className="flex flex-col h-full select-none">
-      <div className="panel-header">Components</div>
+      {!hideHeader && <div className="panel-header">Components</div>}
 
       {/* Search */}
       <div className="p-2 border-b border-[#2a2d3e]">

@@ -23,6 +23,13 @@ interface UIStore extends UIState {
   toggleDarkMode: () => void;
   simulationMode: SimulationMode;
   setSimulationMode: (mode: SimulationMode) => void;
+  // Sidebar collapse (icon rail) vs hidden vs expanded
+  sidebarCollapsed: boolean;
+  rightPanelCollapsed: boolean;
+  setSidebarCollapsed: (v: boolean) => void;
+  setRightPanelCollapsed: (v: boolean) => void;
+  toggleSidebarCollapse: () => void;
+  toggleRightPanelCollapse: () => void;
 }
 
 export const useUIStore = create<UIStore>()(
@@ -47,6 +54,8 @@ export const useUIStore = create<UIStore>()(
     isSimulationRunning: false,
     isDarkMode: true,
     simulationMode: 'dc',
+    sidebarCollapsed: false,
+    rightPanelCollapsed: false,
 
     setViewMode: (mode) => set(state => { state.viewMode = mode; }),
     setActiveTab: (tab) => set(state => { state.activeTab = tab; }),
@@ -67,5 +76,17 @@ export const useUIStore = create<UIStore>()(
     setSimulationRunning: (running) => set(state => { state.isSimulationRunning = running; }),
     toggleDarkMode: () => set(state => { state.isDarkMode = !state.isDarkMode; }),
     setSimulationMode: (mode) => set(state => { state.simulationMode = mode; }),
+    setSidebarCollapsed: (v) => set(state => { state.sidebarCollapsed = v; }),
+    setRightPanelCollapsed: (v) => set(state => { state.rightPanelCollapsed = v; }),
+    toggleSidebarCollapse: () => set(state => {
+      if (!state.sidebarOpen) { state.sidebarOpen = true; state.sidebarCollapsed = false; }
+      else if (!state.sidebarCollapsed) { state.sidebarCollapsed = true; }
+      else { state.sidebarOpen = false; state.sidebarCollapsed = false; }
+    }),
+    toggleRightPanelCollapse: () => set(state => {
+      if (!state.propertiesPanelOpen) { state.propertiesPanelOpen = true; state.rightPanelCollapsed = false; }
+      else if (!state.rightPanelCollapsed) { state.rightPanelCollapsed = true; }
+      else { state.propertiesPanelOpen = false; state.rightPanelCollapsed = false; }
+    }),
   }))
 );
