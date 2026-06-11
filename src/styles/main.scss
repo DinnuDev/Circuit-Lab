@@ -1,0 +1,129 @@
+@use 'tokens' as *;
+@use 'components' as *;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+// ══════════════════════════════════════════════════════════
+// CIRCUIT LAB — Global Stylesheet
+// ══════════════════════════════════════════════════════════
+
+// ── CSS Custom Properties ──────────────────────────────────
+:root {
+  --bg-deep:      #{$color-bg-deep};
+  --bg:           #{$color-bg};
+  --surface:      #{$color-surface};
+  --surface-2:    #{$color-surface-2};
+  --surface-3:    #{$color-surface-3};
+  --border:       #{$color-border};
+  --border-2:     #{$color-border-2};
+  --text:         #{$gray-200};
+  --text-muted:   #{$gray-500};
+  --text-subtle:  #{$gray-700};
+  --accent:       #{$color-blue-500};
+  --accent-light: #{$color-blue-400};
+
+  // Legacy compatibility
+  --circuit-bg:          #{$color-bg};
+  --circuit-panel:       #{$color-surface-2};
+  --circuit-panel2:      #{$color-surface};
+  --circuit-border:      #{$color-border};
+  --circuit-accent:      #{$color-blue-500};
+  --circuit-text:        #{$gray-200};
+  --circuit-text-muted:  #{$gray-500};
+}
+
+// ── Reset ──────────────────────────────────────────────────
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+// ── Base ───────────────────────────────────────────────────
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: $font-sans;
+  font-size: $text-base;
+  line-height: $leading-normal;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ── Scrollbar ──────────────────────────────────────────────
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: $color-border-2;
+  border-radius: $radius-full;
+  &:hover { background: darken($color-border-2, 5%); }
+}
+
+// ── Selection ──────────────────────────────────────────────
+::selection {
+  background: rgba(59,130,246,0.3);
+  color: white;
+}
+
+// ── Panel layout helpers ───────────────────────────────────
+.panel {
+  background: $color-surface-2;
+  border: 1px solid $color-border;
+}
+
+.panel-header {
+  padding: 7px $sp-3;
+  border-bottom: 1px solid $color-border;
+  font-family: $font-sans;
+  font-size: $text-xs;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: $tracking-caps;
+  color: $gray-500;
+}
+
+// ── Legacy prop-input ──────────────────────────────────────
+.prop-input {
+  @extend .cl-input;
+}
+
+// ── Wire animations ────────────────────────────────────────
+@keyframes current-flow {
+  0%   { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+  50%       { filter: drop-shadow(0 0 14px currentColor); }
+}
+
+@keyframes slide-in-down {
+  from { transform: translateY(-8px) translateX(-50%); opacity: 0; }
+  to   { transform: translateY(0) translateX(-50%); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.wire-active { animation: current-flow 1.5s linear infinite; }
+.component-error { animation: pulse-glow 1.2s ease-in-out infinite; }
+
+// ── Toolbar animation ──────────────────────────────────────
+.cl-selection-bar {
+  animation: slide-in-down 150ms ease both;
+  transform-origin: top center;
+}
+
+// ── Canvas cursor helpers ──────────────────────────────────
+.canvas-pan          { cursor: grab; }
+.canvas-pan:active   { cursor: grabbing; }
+.canvas-crosshair    { cursor: crosshair; }

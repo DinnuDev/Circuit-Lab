@@ -1,0 +1,649 @@
+Project Title:
+Advanced 2D/3D Electrical & Electronics Circuit Builder, Analyzer, and Real-Time Simulator
+
+Project Overview
+
+Build a professional-grade web-based Electrical and Electronics Circuit Design, Visualization, Analysis, and Simulation Platform using React, TypeScript, Three.js, React Three Fiber, and modern web technologies.
+
+The application should allow users to build circuits by drag-and-drop, simulate real-world electrical behavior, visualize current flow in real time, identify design mistakes, measure outputs using virtual instruments, and switch between schematic (2D) and realistic (3D) views.
+
+The goal is to create a browser-based alternative inspired by:
+
+- LTSpice
+- Multisim
+- Proteus
+- Tinkercad Circuits
+- Falstad Circuit Simulator
+- EasyEDA
+- KiCad
+- Fritzing
+- CircuitLab
+
+while providing a highly interactive infinite-canvas 3D experience.
+
+====================================================
+CORE REQUIREMENTS
+====================================================
+
+The system must support:
+
+1. Circuit Design
+2. Circuit Simulation
+3. Real-Time Analysis
+4. Error Detection
+5. Measurement Tools
+6. Breadboard Building
+7. PCB Preparation Foundation
+8. 2D Schematic Mode
+9. 3D Physical Mode
+10. Educational Visualization Mode
+
+====================================================
+TECH STACK
+====================================================
+
+Frontend:
+- React
+- TypeScript
+- Vite
+- React Three Fiber
+- Three.js
+- Zustand
+- React Query
+- Tailwind CSS
+- Radix UI
+- D3.js (graphs)
+- React Flow (optional)
+
+Rendering:
+- Three.js
+- WebGL
+- Instanced Rendering
+- Level of Detail (LOD)
+
+Physics:
+- Custom electrical simulation engine
+- Optional WebAssembly support
+- Worker Threads
+
+Storage:
+- IndexedDB
+- Local Storage
+- Project Export/Import
+
+Future:
+- Cloud Sync
+- User Accounts
+- Collaboration
+
+====================================================
+VIEW MODES
+====================================================
+
+The simulator must support multiple synchronized views.
+
+1. 2D SCHEMATIC MODE
+
+Traditional engineering schematic view.
+
+Components appear as:
+
+- Resistors
+- Capacitors
+- Diodes
+- LEDs
+- Transistors
+- Logic Gates
+
+using standard IEC and ANSI symbols.
+
+Examples:
+
+Resistor:
+---/\/\/\---
+
+Capacitor:
+---||---
+
+Diode:
+---|>|---
+
+Each component should display:
+
+- Name
+- Value
+- Voltage
+- Current
+- Power Dissipation
+
+====================================================
+2. 3D REALISTIC MODE
+====================================================
+
+Components appear as realistic physical objects.
+
+Examples:
+
+- Resistors
+- Electrolytic capacitors
+- Ceramic capacitors
+- LEDs
+- IC chips
+- Breadboards
+- Switches
+- Relays
+- Motors
+
+Rendered in Three.js.
+
+Support:
+
+- Orbit Controls
+- Pan
+- Zoom
+- Fly Mode
+- Minimap
+
+====================================================
+3. SPLIT VIEW
+====================================================
+
+Show:
+
+Left:
+2D Schematic
+
+Right:
+3D Physical Circuit
+
+Changes in one view automatically update the other.
+
+====================================================
+INFINITE BREADBOARD
+====================================================
+
+Create a virtual infinite breadboard system.
+
+Features:
+
+- Infinite scrolling
+- Infinite zoom
+- Mini-map
+- Pan navigation
+- Drag navigation
+- Search coordinates
+- Snap-to-grid
+
+Breadboard must contain:
+
+- Power rails
+- Bus strips
+- Connection holes
+- Labels
+
+Users can place unlimited components.
+
+====================================================
+COMPONENT LIBRARY
+====================================================
+
+Create a comprehensive component library.
+
+Electrical Components:
+
+Passive:
+- Resistor
+- Potentiometer
+- Rheostat
+- Capacitor
+- Inductor
+- Transformer
+- Ferrite Bead
+- Crystal Oscillator
+
+Power:
+- Battery
+- Cell
+- DC Source
+- AC Source
+- Solar Panel
+- Generator
+- UPS
+- Power Supply
+
+Switching:
+- SPST
+- SPDT
+- DPDT
+- Push Button
+- Rotary Switch
+- Toggle Switch
+
+Protection:
+- Fuse
+- Circuit Breaker
+- Surge Protector
+- MOV
+- TVS Diode
+
+Semiconductors:
+- Diode
+- LED
+- Zener
+- Schottky
+- Bridge Rectifier
+
+Transistors:
+- BJT NPN
+- BJT PNP
+- MOSFET N
+- MOSFET P
+- JFET
+- IGBT
+
+Integrated Circuits:
+- Op-Amps
+- Comparators
+- Timers
+- 555
+- ADC
+- DAC
+- Voltage Regulators
+
+Logic:
+- AND
+- OR
+- XOR
+- NAND
+- NOR
+- NOT
+- Flip-Flops
+
+Microcontrollers:
+- Arduino Uno
+- Arduino Mega
+- ESP32
+- ESP8266
+- STM32
+- Raspberry Pi Pico
+
+Communication:
+- UART
+- SPI
+- I2C
+- CAN
+- RS485
+
+Displays:
+- Seven Segment
+- LCD
+- OLED
+- TFT
+- LED Matrix
+
+Sensors:
+- Temperature
+- Humidity
+- Pressure
+- Motion
+- Ultrasonic
+- Light
+- Hall Effect
+- Accelerometer
+- Gyroscope
+
+Actuators:
+- DC Motor
+- Servo Motor
+- Stepper Motor
+- Relay
+- Solenoid
+- Buzzer
+
+Industrial:
+- PLC Modules
+- Contactors
+- Motor Starters
+- VFDs
+
+====================================================
+COMPONENT PROPERTIES PANEL
+====================================================
+
+Every component must expose editable properties.
+
+Resistor:
+- Resistance
+- Tolerance
+- Power Rating
+
+Capacitor:
+- Capacitance
+- ESR
+- Voltage Rating
+
+Inductor:
+- Inductance
+- Resistance
+
+Battery:
+- Voltage
+- Capacity
+
+LED:
+- Color
+- Forward Voltage
+- Current Rating
+
+Motor:
+- RPM
+- Torque
+- Voltage
+
+Changes update simulation instantly.
+
+====================================================
+WIRE SYSTEM
+====================================================
+
+Users can:
+
+- Drag wires
+- Route wires
+- Auto-route
+- Multi-segment routing
+- Curved routing
+- Bus routing
+
+Wire types:
+
+- Copper
+- Jumper
+- Ribbon
+- Shielded
+
+Wire properties:
+
+- Resistance
+- Gauge
+- Length
+
+====================================================
+REAL-TIME ELECTRICAL SIMULATION
+====================================================
+
+Create a simulation engine supporting:
+
+DC Analysis:
+- Voltage
+- Current
+- Power
+
+AC Analysis:
+- Frequency
+- Phase
+- Impedance
+
+Transient Analysis:
+- Charging
+- Discharging
+- Switching
+
+Logic Simulation:
+- Digital states
+- Timing diagrams
+
+Motor Simulation:
+- RPM
+- Torque
+
+====================================================
+ELECTRICITY FLOW VISUALIZATION
+====================================================
+
+One of the most important features.
+
+Visualize current flow.
+
+Examples:
+
+Current represented by:
+
+- Moving particles
+- Glowing wire effects
+- Energy pulses
+- Electron animations
+
+Color coding:
+
+Green:
+Normal operation
+
+Blue:
+Low current
+
+Yellow:
+Moderate current
+
+Orange:
+High current
+
+Red:
+Dangerous current
+
+Flashing Red:
+Failure condition
+
+Display:
+
+- Voltage drops
+- Current direction
+- Power consumption
+
+in real time.
+
+====================================================
+ERROR DETECTION ENGINE
+====================================================
+
+Automatically detect:
+
+Short Circuits
+Open Circuits
+Reverse Polarity
+Overcurrent
+Undervoltage
+Overvoltage
+Component Overheating
+Incorrect Grounding
+Floating Inputs
+Logic Conflicts
+
+Display:
+
+- Error markers
+- Warnings
+- Explanations
+- Fix suggestions
+
+Example:
+
+"LED connected directly to 12V source without current limiting resistor."
+
+Suggested Fix:
+"Add resistor between 220Ω and 1kΩ."
+
+====================================================
+MEASUREMENT INSTRUMENTS
+====================================================
+
+Virtual instruments:
+
+- Voltmeter
+- Ammeter
+- Multimeter
+- Oscilloscope
+- Logic Analyzer
+- Frequency Counter
+- Power Meter
+- Watt Meter
+- Spectrum Analyzer
+
+Oscilloscope features:
+
+- Multiple channels
+- Triggering
+- FFT
+- Zoom
+- Persistence
+
+====================================================
+THERMAL VISUALIZATION
+====================================================
+
+Show component temperatures.
+
+Heat map:
+
+Blue:
+Cold
+
+Green:
+Normal
+
+Yellow:
+Warm
+
+Red:
+Hot
+
+White:
+Critical
+
+Display:
+
+- Junction temperature
+- Thermal runaway risk
+
+====================================================
+EDUCATIONAL MODE
+====================================================
+
+Teach users electronics.
+
+Features:
+
+- Explain current flow
+- Explain voltage drops
+- Explain resistor calculations
+- Explain capacitor charging
+- Explain transistor operation
+
+Interactive overlays:
+
+"What happens if..."
+
+Examples:
+
+- Remove resistor
+- Increase voltage
+- Reverse polarity
+
+====================================================
+PROJECT MANAGEMENT
+====================================================
+
+Save projects.
+
+Support:
+
+- New Project
+- Open Project
+- Auto Save
+- Version History
+- Undo
+- Redo
+
+Export:
+
+- JSON
+- PNG
+- SVG
+- PDF
+- Circuit Files
+
+====================================================
+PERFORMANCE REQUIREMENTS
+====================================================
+
+Support:
+
+- 100,000+ wires
+- 50,000+ components
+- Infinite breadboard
+- Large circuits
+
+Use:
+
+- Web Workers
+- Spatial indexing
+- Chunk rendering
+- Virtualization
+- Instanced meshes
+
+Maintain:
+
+60 FPS minimum
+
+====================================================
+ADVANCED FUTURE FEATURES
+====================================================
+
+Phase 2:
+
+- PCB generation
+- Auto-routing
+- BOM generation
+- SPICE compatibility
+- LTSpice import/export
+- KiCad import/export
+- EasyEDA import/export
+
+Phase 3:
+
+- Multiplayer collaboration
+- Voice assistant
+- AI circuit designer
+- AI error diagnosis
+- AI circuit optimization
+- AI circuit generation from text prompts
+
+Examples:
+
+"Create a 5V regulated power supply."
+
+"Create a blinking LED using a 555 timer."
+
+"Design a motor controller using an ESP32."
+
+The AI should automatically generate the circuit, place components, connect wiring, run validation, and explain the design.
+
+====================================================
+FINAL GOAL
+====================================================
+
+Build the most advanced browser-based Electrical and Electronics Design, Visualization, Learning, and Simulation Platform possible, combining:
+
+- Circuit Design
+- Real-Time Simulation
+- 2D Schematics
+- 3D Visualization
+- Infinite Breadboards
+- Electrical Analysis
+- Thermal Analysis
+- Measurement Instruments
+- Error Detection
+- Educational Explanations
+- AI-Assisted Design
+
+with a modern, professional engineering-grade user experience suitable for students, hobbyists, engineers, educators, and industrial users.

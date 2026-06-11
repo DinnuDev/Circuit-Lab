@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --circuit-bg: #0f1117;
+  --circuit-panel: #1a1d27;
+  --circuit-panel2: #12141f;
+  --circuit-border: #2a2d3e;
+  --circuit-accent: #3b82f6;
+  --circuit-text: #e2e8f0;
+  --circuit-text-muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--circuit-bg);
+  color: var(--circuit-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--circuit-panel2); }
+::-webkit-scrollbar-thumb { background: var(--circuit-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3d50; }
+
+/* Canvas cursor */
+.canvas-pan { cursor: grab; }
+.canvas-pan:active { cursor: grabbing; }
+.canvas-crosshair { cursor: crosshair; }
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+  50% { filter: drop-shadow(0 0 12px currentColor); }
+}
+
+@keyframes current-flow {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes electron-move {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+.wire-active {
+  animation: current-flow 1.5s linear infinite;
+}
+
+.component-selected {
+  filter: drop-shadow(0 0 6px #3b82f6);
+}
+
+.component-error {
+  filter: drop-shadow(0 0 8px #ef4444);
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+
+.component-warning {
+  filter: drop-shadow(0 0 6px #f59e0b);
+}
+
+/* Grid pattern */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Panel styles */
+.panel {
+  background: var(--circuit-panel);
+  border: 1px solid var(--circuit-border);
+}
+
+.panel-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--circuit-border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--circuit-text-muted);
+}
+
+/* Tooltip */
+.tooltip {
+  @apply absolute z-50 px-2 py-1 text-xs bg-gray-900 border border-gray-700 rounded text-gray-200 pointer-events-none whitespace-nowrap;
+}
+
+/* Input styles */
+.prop-input {
+  @apply w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm text-gray-200 focus:outline-none focus:border-blue-500;
+}
+
+/* Status indicator */
+.status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+/* Wire colors based on voltage/current */
+.wire-ground { stroke: #64748b; }
+.wire-power { stroke: #ef4444; }
+.wire-signal { stroke: #22c55e; }
+.wire-high-z { stroke: #94a3b8; stroke-dasharray: 4 4; }

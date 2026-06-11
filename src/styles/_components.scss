@@ -1,0 +1,523 @@
+@use 'tokens' as *;
+
+// ══════════════════════════════════════════════════════════
+// CIRCUIT LAB — Component Mixins & Classes
+// ══════════════════════════════════════════════════════════
+
+// ── Typography helpers ─────────────────────────────────────
+@mixin type-label {
+  font-family: $font-sans;
+  font-size: $text-xs;
+  font-weight: $fw-semibold;
+  text-transform: uppercase;
+  letter-spacing: $tracking-caps;
+  color: $gray-500;
+}
+
+@mixin type-caption {
+  font-family: $font-sans;
+  font-size: $text-xs;
+  font-weight: $fw-normal;
+  color: $gray-500;
+  line-height: $leading-normal;
+}
+
+@mixin type-body {
+  font-family: $font-sans;
+  font-size: $text-base;
+  font-weight: $fw-normal;
+  color: $gray-300;
+  line-height: $leading-normal;
+}
+
+@mixin type-heading-sm {
+  font-family: $font-sans;
+  font-size: $text-md;
+  font-weight: $fw-semibold;
+  color: $gray-100;
+  line-height: $leading-tight;
+}
+
+@mixin type-mono {
+  font-family: $font-mono;
+  font-size: $text-sm;
+}
+
+// ── Surface helpers ────────────────────────────────────────
+@mixin surface($level: 1) {
+  @if $level == 1 { background: $color-surface; }
+  @else if $level == 2 { background: $color-surface-2; }
+  @else if $level == 3 { background: $color-surface-3; }
+  border-radius: $radius-md;
+}
+
+@mixin border-subtle {
+  border: 1px solid $color-border;
+}
+
+@mixin border-medium {
+  border: 1px solid $color-border-2;
+}
+
+// ── Focus ring ─────────────────────────────────────────────
+@mixin focus-ring($color: $color-blue-500) {
+  &:focus-visible {
+    outline: 2px solid rgba($color, 0.7);
+    outline-offset: 2px;
+  }
+}
+
+// ── Interactive base ───────────────────────────────────────
+@mixin interactive-base {
+  cursor: pointer;
+  transition: background-color $transition-fast, color $transition-fast, border-color $transition-fast;
+  @include focus-ring;
+}
+
+// ══════════════════════════════════════════════════════════
+// GLOBAL CLASSES
+// ══════════════════════════════════════════════════════════
+
+// ── Toggle Switch ──────────────────────────────────────────
+.cl-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  gap: $sp-2;
+
+  &__track {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: $radius-full;
+    background: $gray-700;
+    transition: background $transition-base;
+    flex-shrink: 0;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: $radius-full;
+      background: $gray-400;
+      box-shadow: $shadow-sm;
+      transition: transform $transition-base, background $transition-base;
+    }
+  }
+
+  input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  &:has(input:checked) .cl-toggle__track {
+    background: $color-blue-500;
+    box-shadow: 0 0 8px rgba(59,130,246,0.3);
+
+    &::after {
+      transform: translateX(14px);
+      background: white;
+    }
+  }
+
+  &__label {
+    @include type-body;
+    color: $gray-400;
+    user-select: none;
+    transition: color $transition-fast;
+  }
+
+  &:hover .cl-toggle__label {
+    color: $gray-200;
+  }
+
+  &:has(input:checked) .cl-toggle__label {
+    color: $gray-200;
+  }
+}
+
+// ── Section heading ────────────────────────────────────────
+.cl-section-heading {
+  @include type-label;
+  padding: $sp-2 $sp-3;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid $color-border;
+  cursor: pointer;
+  transition: background $transition-fast;
+  user-select: none;
+
+  &:hover {
+    background: rgba(255,255,255,0.02);
+  }
+
+  svg { opacity: 0.5; }
+}
+
+// ── Prop input ─────────────────────────────────────────────
+.cl-input {
+  width: 100%;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $sp-1 + 2px $sp-2;
+  font-family: $font-mono;
+  font-size: $text-sm;
+  color: $gray-200;
+  outline: none;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &:hover {
+    border-color: $color-border-2;
+  }
+
+  &:focus {
+    border-color: $color-blue-500;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.12);
+  }
+
+  &--with-unit {
+    padding-right: 28px;
+  }
+
+  // Number spinners hidden (we use custom ▲▼)
+  &[type="number"] {
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+    }
+  }
+}
+
+// ── Action button ──────────────────────────────────────────
+.cl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $sp-1 + 2px;
+  border-radius: $radius-md;
+  font-family: $font-sans;
+  font-size: $text-xs;
+  font-weight: $fw-medium;
+  cursor: pointer;
+  border: 1px solid transparent;
+  @include interactive-base;
+
+  // Sizes
+  &--sm {
+    padding: 4px $sp-2;
+    gap: $sp-1;
+  }
+
+  &--md {
+    padding: 6px $sp-3;
+  }
+
+  // Variants
+  &--ghost {
+    background: transparent;
+    color: $gray-400;
+
+    &:hover {
+      background: rgba(255,255,255,0.07);
+      color: $gray-200;
+    }
+  }
+
+  &--subtle {
+    background: rgba(255,255,255,0.05);
+    color: $gray-300;
+    border-color: $color-border;
+
+    &:hover {
+      background: rgba(255,255,255,0.09);
+      color: $gray-100;
+      border-color: $color-border-2;
+    }
+  }
+
+  &--danger {
+    background: transparent;
+    color: $color-red-400;
+
+    &:hover {
+      background: rgba(239,68,68,0.12);
+      color: lighten($color-red-400, 8%);
+    }
+  }
+
+  &--primary {
+    background: rgba(59,130,246,0.15);
+    color: $color-blue-400;
+    border-color: rgba(59,130,246,0.25);
+
+    &:hover {
+      background: rgba(59,130,246,0.25);
+      color: lighten($color-blue-400, 5%);
+    }
+  }
+
+  &--success {
+    background: rgba(34,197,94,0.15);
+    color: $color-green-400;
+    border-color: rgba(34,197,94,0.25);
+
+    &:hover {
+      background: rgba(34,197,94,0.25);
+    }
+  }
+
+  svg { flex-shrink: 0; }
+}
+
+// ── Selection toolbar ──────────────────────────────────────
+.cl-selection-bar {
+  display: inline-flex;
+  align-items: center;
+  background: $color-surface-2;
+  border: 1px solid $color-border-2;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md, 0 0 0 1px rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+
+  &__count {
+    display: flex;
+    align-items: center;
+    gap: $sp-1;
+    padding: 0 $sp-3;
+    height: 36px;
+    border-right: 1px solid $color-border;
+    background: rgba(59,130,246,0.06);
+
+    .count-number {
+      font-family: $font-mono;
+      font-size: $text-md;
+      font-weight: $fw-bold;
+      color: $color-blue-400;
+    }
+
+    .count-label {
+      font-size: $text-xs;
+      color: $gray-500;
+      white-space: nowrap;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    padding: 0 $sp-1;
+    height: 36px;
+    gap: 2px;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 20px;
+    background: $color-border;
+    margin: 0 $sp-1;
+    flex-shrink: 0;
+  }
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px $sp-2;
+    border-radius: $radius-sm;
+    font-size: $text-xs;
+    font-weight: $fw-medium;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    white-space: nowrap;
+    transition: background $transition-fast, color $transition-fast;
+
+    &--default {
+      color: $gray-400;
+      &:hover { background: rgba(255,255,255,0.08); color: $gray-100; }
+    }
+
+    &--danger {
+      color: $color-red-400;
+      &:hover { background: rgba(239,68,68,0.12); color: lighten($color-red-400, 8%); }
+    }
+
+    &--muted {
+      color: $gray-600;
+      &:hover { background: rgba(255,255,255,0.05); color: $gray-400; }
+    }
+  }
+}
+
+// ── Panel section ──────────────────────────────────────────
+.cl-panel-section {
+  border-top: 1px solid $color-border;
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+// ── Sim readout ────────────────────────────────────────────
+.cl-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+
+  &__label {
+    @include type-caption;
+  }
+
+  &__value {
+    @include type-mono;
+    font-size: $text-xs;
+    font-weight: $fw-semibold;
+
+    &--green  { color: $color-green-400; }
+    &--blue   { color: $color-blue-400; }
+    &--yellow { color: $color-yellow-400; }
+    &--red    { color: $color-red-400; }
+    &--orange { color: $color-orange-500; }
+    &--muted  { color: $gray-400; }
+  }
+}
+
+// ── Power bar ──────────────────────────────────────────────
+.cl-power-bar {
+  margin-top: $sp-2;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    @include type-caption;
+    margin-bottom: 4px;
+  }
+
+  &__track {
+    height: 5px;
+    background: $color-bg;
+    border-radius: $radius-full;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: $radius-full;
+    background: linear-gradient(90deg, $color-green-500, $color-yellow-400);
+    transition: width 300ms ease;
+
+    &--warn  { background: linear-gradient(90deg, $color-yellow-400, $color-orange-500); }
+    &--crit  { background: linear-gradient(90deg, $color-orange-500, $color-red-500); }
+  }
+}
+
+// ── Component card header ──────────────────────────────────
+.cl-comp-header {
+  padding: $sp-3;
+  border-bottom: 1px solid $color-border;
+
+  &__top {
+    display: flex;
+    align-items: flex-start;
+    gap: $sp-2 + 2px;
+    margin-bottom: $sp-2;
+  }
+
+  &__symbol {
+    width: 44px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+
+    .comp-name {
+      @include type-heading-sm;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .comp-desc {
+      @include type-caption;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .comp-type {
+      font-family: $font-mono;
+      font-size: $text-xs;
+      color: $gray-600;
+      margin-top: 1px;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+}
+
+// ── Pin row ────────────────────────────────────────────────
+.cl-pin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: $sp-1 + 2px;
+  }
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: $radius-full;
+    flex-shrink: 0;
+
+    &--connected { background: $color-green-500; }
+    &--open      { background: $gray-700; }
+  }
+
+  &__name {
+    font-size: $text-xs;
+    color: $gray-400;
+  }
+
+  &__type {
+    font-size: $text-xs;
+    font-family: $font-mono;
+    color: $gray-700;
+  }
+
+  &__status {
+    font-size: $text-xs;
+    font-family: $font-mono;
+
+    &--connected { color: $color-green-500; }
+    &--open      { color: $gray-700; }
+  }
+}

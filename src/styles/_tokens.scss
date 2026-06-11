@@ -1,0 +1,91 @@
+// ══════════════════════════════════════════════════════════
+// CIRCUIT LAB — Design Tokens
+// ══════════════════════════════════════════════════════════
+
+// ── Color palette ─────────────────────────────────────────
+$color-bg-deep:     #090b10;
+$color-bg:          #0f1117;
+$color-surface:     #13161f;
+$color-surface-2:   #1a1d2a;
+$color-surface-3:   #1f2333;
+$color-border:      #252838;
+$color-border-2:    #2d3148;
+
+$color-blue-50:     #eff6ff;
+$color-blue-400:    #60a5fa;
+$color-blue-500:    #3b82f6;
+$color-blue-600:    #2563eb;
+
+$color-green-400:   #4ade80;
+$color-green-500:   #22c55e;
+
+$color-red-400:     #f87171;
+$color-red-500:     #ef4444;
+
+$color-yellow-400:  #facc15;
+$color-amber-400:   #fbbf24;
+$color-orange-500:  #f97316;
+
+$color-violet-400:  #a78bfa;
+$color-teal-400:    #2dd4bf;
+
+// ── Neutral scale ──────────────────────────────────────────
+$gray-900: #111827;
+$gray-800: #1f2937;
+$gray-700: #374151;
+$gray-600: #4b5563;
+$gray-500: #6b7280;
+$gray-400: #9ca3af;
+$gray-300: #d1d5db;
+$gray-200: #e5e7eb;
+$gray-100: #f3f4f6;
+
+// ── Typography ─────────────────────────────────────────────
+$font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+$font-mono:  'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+$text-xs:   0.688rem;   // 11px
+$text-sm:   0.75rem;    // 12px
+$text-base: 0.8125rem;  // 13px
+$text-md:   0.875rem;   // 14px
+$text-lg:   1rem;       // 16px
+
+$fw-normal:   400;
+$fw-medium:   500;
+$fw-semibold: 600;
+$fw-bold:     700;
+
+$leading-tight:  1.25;
+$leading-normal: 1.5;
+
+// Letter-spacing for caps labels
+$tracking-caps:  0.06em;
+$tracking-wide:  0.04em;
+
+// ── Spacing ────────────────────────────────────────────────
+$sp-1: 4px;
+$sp-2: 8px;
+$sp-3: 12px;
+$sp-4: 16px;
+$sp-5: 20px;
+$sp-6: 24px;
+
+// ── Radius ─────────────────────────────────────────────────
+$radius-sm:  4px;
+$radius-md:  8px;
+$radius-lg:  12px;
+$radius-xl:  16px;
+$radius-full: 9999px;
+
+// ── Shadows ────────────────────────────────────────────────
+$shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+$shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+$shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
+$shadow-glow-blue:   0 0 12px rgba(59,130,246,0.25);
+$shadow-glow-green:  0 0 10px rgba(34,197,94,0.2);
+$shadow-glow-red:    0 0 10px rgba(239,68,68,0.25);
+
+// ── Transitions ────────────────────────────────────────────
+$transition-fast:  100ms ease;
+$transition-base:  160ms ease;
+$transition-slow:  250ms ease;
