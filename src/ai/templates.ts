@@ -289,6 +289,145 @@ export const CIRCUIT_TEMPLATES: Record<string, CircuitBlueprint> = {
     ],
     notes: ['Gain = -Rf/Rin = -100k/10k = -10', 'Output is inverted', '±15V supply rails required'],
   },
+
+  // ── Bridge Rectifier (4 discrete diodes) ──────────────────
+  bridge_rectifier_diodes: {
+    title: 'Full-Wave Bridge Rectifier (Discrete Diodes)',
+    description: 'AC to DC conversion using 4 diodes. Vout(avg) ≈ 0.636 × Vpeak − 1.4V for diode drops.',
+    components: [
+      { type: 'ac_source',  label: 'VAC',  properties: { voltage: 12, frequency: 50 }, gx: 0, gy: 2 },
+      // Top two diodes
+      { type: 'diode', label: 'D1', properties: { forwardVoltage: 0.7, currentRating: 1 }, gx: 2, gy: 0 },
+      { type: 'diode', label: 'D2', properties: { forwardVoltage: 0.7, currentRating: 1 }, gx: 4, gy: 0 },
+      // Bottom two diodes
+      { type: 'diode', label: 'D3', properties: { forwardVoltage: 0.7, currentRating: 1 }, gx: 2, gy: 4 },
+      { type: 'diode', label: 'D4', properties: { forwardVoltage: 0.7, currentRating: 1 }, gx: 4, gy: 4 },
+      // Filter capacitor
+      { type: 'capacitor', label: 'C1', properties: { capacitance: 0.001, voltageRating: 50 }, gx: 6, gy: 1 },
+      // Load
+      { type: 'resistor', label: 'RL', properties: { resistance: 1000 }, gx: 6, gy: 2 },
+      // Voltmeter
+      { type: 'voltmeter', label: 'VM1', gx: 7, gy: 2 },
+      { type: 'ground', label: 'GND', gx: 6, gy: 5 },
+    ],
+    wires: [
+      // AC source to bridge inputs (midpoints of top and bottom pairs)
+      { from: { comp: 0, pin: 'plus' },    to: { comp: 1, pin: 'anode' } },
+      { from: { comp: 0, pin: 'plus' },    to: { comp: 3, pin: 'cathode' } },
+      { from: { comp: 0, pin: 'minus' },   to: { comp: 2, pin: 'anode' } },
+      { from: { comp: 0, pin: 'minus' },   to: { comp: 4, pin: 'cathode' } },
+      // DC+ output: D1 and D2 cathodes
+      { from: { comp: 1, pin: 'cathode' }, to: { comp: 5, pin: 'plus' } },
+      { from: { comp: 2, pin: 'cathode' }, to: { comp: 5, pin: 'plus' } },
+      { from: { comp: 5, pin: 'plus' },    to: { comp: 6, pin: 'p1' } },
+      { from: { comp: 5, pin: 'plus' },    to: { comp: 7, pin: 'plus' } },
+      // DC− output: D3 and D4 anodes
+      { from: { comp: 3, pin: 'anode' },   to: { comp: 8, pin: 'gnd' } },
+      { from: { comp: 4, pin: 'anode' },   to: { comp: 8, pin: 'gnd' } },
+      { from: { comp: 6, pin: 'p2' },      to: { comp: 8, pin: 'gnd' } },
+      { from: { comp: 5, pin: 'minus' },   to: { comp: 8, pin: 'gnd' } },
+      { from: { comp: 7, pin: 'minus' },   to: { comp: 8, pin: 'gnd' } },
+    ],
+    notes: [
+      'Vout(avg) = 0.636 × Vpeak − 2×Vf ≈ 0.636 × 17V − 1.4V ≈ 9.4V DC',
+      'C1=1000μF smoothing capacitor reduces ripple',
+      'Each diode: 1N4007 (1A/1000V) recommended',
+      'Peak reverse voltage on each diode = Vpeak ≈ 17V',
+    ],
+  },
+
+  // ── Bridge Rectifier (compact IC symbol) ──────────────────
+  bridge_rectifier_ic: {
+    title: 'Bridge Rectifier Module (Integrated)',
+    description: 'AC to DC rectification using a bridge rectifier module (e.g. W04G, DB107) with filter and load.',
+    components: [
+      { type: 'ac_source',       label: 'VAC', properties: { voltage: 12, frequency: 50 }, gx: 0, gy: 2 },
+      { type: 'bridge_rectifier', label: 'BR1', properties: { voltageRating: 200, currentRating: 1 }, gx: 2, gy: 2 },
+      { type: 'capacitor',       label: 'C1',  properties: { capacitance: 0.001, voltageRating: 50 }, gx: 4, gy: 1 },
+      { type: 'capacitor',       label: 'C2',  properties: { capacitance: 0.0000001, voltageRating: 50 }, gx: 4, gy: 2 },
+      { type: 'resistor',        label: 'RL',  properties: { resistance: 1000 }, gx: 5, gy: 2 },
+      { type: 'voltmeter',       label: 'VM1', gx: 6, gy: 2 },
+      { type: 'ground',          label: 'GND', gx: 5, gy: 4 },
+    ],
+    wires: [
+      { from: { comp: 0, pin: 'plus' },    to: { comp: 1, pin: 'ac1' } },
+      { from: { comp: 0, pin: 'minus' },   to: { comp: 1, pin: 'ac2' } },
+      { from: { comp: 1, pin: 'dc_pos' },  to: { comp: 2, pin: 'plus' } },
+      { from: { comp: 1, pin: 'dc_pos' },  to: { comp: 3, pin: 'plus' } },
+      { from: { comp: 1, pin: 'dc_pos' },  to: { comp: 4, pin: 'p1' } },
+      { from: { comp: 1, pin: 'dc_pos' },  to: { comp: 5, pin: 'plus' } },
+      { from: { comp: 2, pin: 'minus' },   to: { comp: 6, pin: 'gnd' } },
+      { from: { comp: 3, pin: 'minus' },   to: { comp: 6, pin: 'gnd' } },
+      { from: { comp: 4, pin: 'p2' },      to: { comp: 6, pin: 'gnd' } },
+      { from: { comp: 5, pin: 'minus' },   to: { comp: 6, pin: 'gnd' } },
+      { from: { comp: 1, pin: 'dc_neg' },  to: { comp: 6, pin: 'gnd' } },
+    ],
+    notes: [
+      'AC input → bridge rectifier → filtered DC output',
+      'C1=1000μF bulk capacitor reduces low-frequency ripple',
+      'C2=100nF ceramic bypass for high-frequency noise',
+      'Vout(DC) ≈ Vpeak − 1.4V (two diode drops)',
+    ],
+  },
+
+  // ── Half-Wave Rectifier ─────────────────────────────────────
+  half_wave_rectifier: {
+    title: 'Half-Wave Rectifier',
+    description: 'Simplest AC to DC circuit using a single diode. Only conducts on positive half-cycles.',
+    components: [
+      { type: 'ac_source', label: 'VAC', properties: { voltage: 12, frequency: 50 }, gx: 0, gy: 1 },
+      { type: 'diode',     label: 'D1',  properties: { forwardVoltage: 0.7, currentRating: 1 }, gx: 2, gy: 0 },
+      { type: 'capacitor', label: 'C1',  properties: { capacitance: 0.001, voltageRating: 50 }, gx: 4, gy: 0 },
+      { type: 'resistor',  label: 'RL',  properties: { resistance: 1000 }, gx: 4, gy: 1 },
+      { type: 'voltmeter', label: 'VM1', gx: 5, gy: 1 },
+      { type: 'ground',    label: 'GND', gx: 4, gy: 3 },
+    ],
+    wires: [
+      { from: { comp: 0, pin: 'plus' },   to: { comp: 1, pin: 'anode' } },
+      { from: { comp: 1, pin: 'cathode' }, to: { comp: 2, pin: 'plus' } },
+      { from: { comp: 1, pin: 'cathode' }, to: { comp: 3, pin: 'p1' } },
+      { from: { comp: 1, pin: 'cathode' }, to: { comp: 4, pin: 'plus' } },
+      { from: { comp: 2, pin: 'minus' },  to: { comp: 5, pin: 'gnd' } },
+      { from: { comp: 3, pin: 'p2' },     to: { comp: 5, pin: 'gnd' } },
+      { from: { comp: 4, pin: 'minus' },  to: { comp: 5, pin: 'gnd' } },
+      { from: { comp: 0, pin: 'minus' },  to: { comp: 5, pin: 'gnd' } },
+    ],
+    notes: [
+      'Output = only positive half-cycles',
+      'Vout(avg) ≈ 0.318 × Vpeak − Vf ≈ 3.1V from 12V AC',
+      'Higher ripple than full-wave — use larger C for smoother output',
+    ],
+  },
+
+  // ── Zener Voltage Regulator ─────────────────────────────────
+  zener_regulator: {
+    title: 'Zener Diode Voltage Regulator',
+    description: 'Simple shunt regulator using a Zener diode. Vout = Vz.',
+    components: [
+      { type: 'dc_source', label: 'Vin', properties: { voltage: 12 },                gx: 0, gy: 1 },
+      { type: 'resistor',  label: 'R1',  properties: { resistance: 470, powerRating: 0.5 }, gx: 2, gy: 0 },
+      { type: 'zener',     label: 'DZ1', properties: { forwardVoltage: 5.1, currentRating: 0.05 }, gx: 4, gy: 1 },
+      { type: 'resistor',  label: 'RL',  properties: { resistance: 1000 }, gx: 5, gy: 1 },
+      { type: 'voltmeter', label: 'VM1', gx: 6, gy: 1 },
+      { type: 'ground',    label: 'GND', gx: 4, gy: 3 },
+    ],
+    wires: [
+      { from: { comp: 0, pin: 'plus' },    to: { comp: 1, pin: 'p1' } },
+      { from: { comp: 1, pin: 'p2' },      to: { comp: 2, pin: 'cathode' } },
+      { from: { comp: 1, pin: 'p2' },      to: { comp: 3, pin: 'p1' } },
+      { from: { comp: 1, pin: 'p2' },      to: { comp: 4, pin: 'plus' } },
+      { from: { comp: 2, pin: 'anode' },   to: { comp: 5, pin: 'gnd' } },
+      { from: { comp: 3, pin: 'p2' },      to: { comp: 5, pin: 'gnd' } },
+      { from: { comp: 4, pin: 'minus' },   to: { comp: 5, pin: 'gnd' } },
+      { from: { comp: 0, pin: 'minus' },   to: { comp: 5, pin: 'gnd' } },
+    ],
+    notes: [
+      'Vout = Vz = 5.1V (zener breakdown voltage)',
+      'R1 series resistor limits current: Iz = (Vin−Vz)/R1 = (12−5.1)/470 ≈ 15mA',
+      'Max Zener power: Pz = Vz × Iz = 5.1 × 0.015 ≈ 75mW (within 250mW limit)',
+      'Less efficient than LDO but much simpler',
+    ],
+  },
 };
 
 // ── Keyword → template mapping ────────────────────────────────
@@ -334,6 +473,29 @@ export const KEYWORD_MAP: Array<{ patterns: string[]; template: TemplateKey }> =
   {
     patterns: ['opamp', 'op-amp', 'op amp', 'inverting amplifier', 'amplifier', 'amplify'],
     template: 'opamp_inverting',
+  },
+  {
+    patterns: [
+      'bridge rectifier', 'bridge rect', 'full wave rectifier', 'full-wave rectifier',
+      'fullwave', 'full wave', 'rectifier', 'rectify', 'ac to dc', 'ac dc', 'ac-dc',
+      'diode bridge', '1n4007', 'w04g', 'db107', 'four diode',
+    ],
+    template: 'bridge_rectifier_ic',
+  },
+  {
+    patterns: [
+      'bridge rectifier diode', 'discrete bridge', '4 diode', 'four diode rectifier',
+      'rectifier circuit', 'rectifier using diode',
+    ],
+    template: 'bridge_rectifier_diodes',
+  },
+  {
+    patterns: ['half wave', 'half-wave', 'half wave rectifier', 'single diode rectifier', 'halfwave'],
+    template: 'half_wave_rectifier',
+  },
+  {
+    patterns: ['zener regulator', 'zener clamp', 'zener circuit', 'shunt regulator', 'zener voltage'],
+    template: 'zener_regulator',
   },
 ];
 

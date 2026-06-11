@@ -753,6 +753,52 @@ export const COMPONENT_DEFINITIONS: Partial<Record<ComponentType, ComponentDefin
     keywords: ['ammeter', 'current', 'measure', 'meter'],
     mesh3d: 'box',
   },
+
+  schottky: {
+    type: 'schottky',
+    category: 'semiconductor',
+    label: 'DS',
+    description: 'Schottky diode (low Vf)',
+    symbol: SYMBOLS.diode,
+    defaultProperties: { forwardVoltage: 0.3, currentRating: 1 },
+    pins: [
+      { id: 'anode', name: 'A', position: { x: -30, y: 0 }, type: 'anode' },
+      { id: 'cathode', name: 'K', position: { x: 30, y: 0 }, type: 'cathode' },
+    ],
+    boundingBox: { x: -30, y: -12, width: 60, height: 24 },
+    keywords: ['schottky', '1N5819', 'fast diode', 'low drop'],
+    spiceModel: 'D',
+    mesh3d: 'cylinder',
+  },
+
+  bridge_rectifier: {
+    type: 'bridge_rectifier',
+    category: 'semiconductor',
+    label: 'BR',
+    description: 'Full-wave bridge rectifier (4 diodes in bridge)',
+    symbol: `
+      <rect x="-24" y="-24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" transform="rotate(45)"/>
+      <line x1="-34" y1="0" x2="-24" y2="0"/>
+      <line x1="24" y1="0" x2="34" y2="0"/>
+      <line x1="0" y1="-34" x2="0" y2="-24"/>
+      <line x1="0" y1="24" x2="0" y2="34"/>
+      <text x="-6" y="5" font-size="8" font-weight="bold" fill="currentColor">BR</text>
+      <text x="-32" y="-6" font-size="8" fill="currentColor">~</text>
+      <text x="26" y="-6" font-size="8" fill="currentColor">~</text>
+      <text x="-3" y="-26" font-size="9" fill="currentColor">+</text>
+      <text x="-3" y="36" font-size="9" fill="currentColor">−</text>
+    `,
+    defaultProperties: { forwardVoltage: 0.7, currentRating: 1, voltageRating: 200 },
+    pins: [
+      { id: 'ac1', name: 'AC1', position: { x: -34, y: 0 }, type: 'plus' },
+      { id: 'ac2', name: 'AC2', position: { x: 34, y: 0 }, type: 'minus' },
+      { id: 'dc_pos', name: 'DC+', position: { x: 0, y: -34 }, type: 'out' },
+      { id: 'dc_neg', name: 'DC−', position: { x: 0, y: 34 }, type: 'gnd' },
+    ],
+    boundingBox: { x: -36, y: -36, width: 72, height: 72 },
+    keywords: ['bridge rectifier', 'rectifier', 'full wave', 'AC to DC', '1N4007', 'W04G', 'DB107'],
+    mesh3d: 'box',
+  },
 };
 
 // Category display names and icons (Lucide icon names)
