@@ -28,8 +28,9 @@ function segmentIntersection(
   return null;
 }
 
-/** T-junction: does point P lie on segment A-B (not at endpoints)? */
-function pointOnSegment(p: Pt, a: Pt, b: Pt, tol = 3): boolean {
+/** T-junction: does point P lie on segment A-B (not at endpoints)? 
+ *  tol is in canvas units — caller should scale with 1/zoom */
+function pointOnSegment(p: Pt, a: Pt, b: Pt, tol: number): boolean {
   const dx = b.x - a.x, dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
   if (len2 < 1e-6) return false;
@@ -68,44 +69,49 @@ export default function WireLayer({ wires, simResult }: Props) {
   const { viewport } = circuit;
   const z = viewport.zoom;
 
-  // ── Detect crossings and T-junctions ─────────────────────
-  // For each pair of distinct wires, check every segment pair
-  const crossings: Array<{ pt: Pt; wireAIdx: number }> = [];
-  const tjunctions: Array<Pt> = [];
+  // Zoom-relative tolerance: 5 canvas units, scaled so it stays consistent at any zoom
+  const JUNCTION_TOL = 5 / z;
 
-  for (let i = 0; i < wires.length; i++) {
-    for (let j = i + 1; j < wires.length; j++) {
+  // ── Detect crossings and T-junctions — only run when wires change ─────────
+  const crossings: Array<{ pt: Pt; wireAIdx: number }> = [];
+  const tjunctionsRaw: Array<Pt> = [];
+
+  // Limit expensive O(n²) to first 60 wires to prevent UI freeze
+  const maxWires = Math.min(wires.length, 60);
+
+  for (let i = 0; i < maxWires; i++) {
+    for (let j = i + 1; j < maxWires; j++) {
       const wa = wires[i], wb = wires[j];
       const ptsA = [wa.segments[0].start, ...wa.segments.map(s => s.end)];
       const ptsB = [wb.segments[0].start, ...wb.segments.map(s => s.end)];
 
-      // Check if they share a node (same endpoint) — that's a T-junction dot
+      // Shared endpoints (T-junction or direct connection dots)
       for (const pa of [ptsA[0], ptsA[ptsA.length - 1]]) {
         for (const pb of [ptsB[0], ptsB[ptsB.length - 1]]) {
-          if (Math.abs(pa.x - pb.x) < 4 && Math.abs(pa.y - pb.y) < 4) {
-            tjunctions.push({ x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 });
-          }
-        }
-      }
-      // Check if endpoint of A lands on body of B
-      const endpointsA = [ptsA[0], ptsA[ptsA.length - 1]];
-      for (let si = 0; si < wb.segments.length; si++) {
-        for (const ep of endpointsA) {
-          if (pointOnSegment(ep, wb.segments[si].start, wb.segments[si].end)) {
-            tjunctions.push(ep);
-          }
-        }
-      }
-      const endpointsB = [ptsB[0], ptsB[ptsB.length - 1]];
-      for (let si = 0; si < wa.segments.length; si++) {
-        for (const ep of endpointsB) {
-          if (pointOnSegment(ep, wa.segments[si].start, wa.segments[si].end)) {
-            tjunctions.push(ep);
+          if (Math.abs(pa.x - pb.x) < JUNCTION_TOL && Math.abs(pa.y - pb.y) < JUNCTION_TOL) {
+            tjunctionsRaw.push({ x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 });
           }
         }
       }
 
-      // Actual crossings (neither endpoint touches the other wire)
+      // Endpoint of A on body of B
+      for (let si = 0; si < wb.segments.length; si++) {
+        for (const ep of [ptsA[0], ptsA[ptsA.length - 1]]) {
+          if (pointOnSegment(ep, wb.segments[si].start, wb.segments[si].end, JUNCTION_TOL)) {
+            tjunctionsRaw.push(ep);
+          }
+        }
+      }
+      // Endpoint of B on body of A
+      for (let si = 0; si < wa.segments.length; si++) {
+        for (const ep of [ptsB[0], ptsB[ptsB.length - 1]]) {
+          if (pointOnSegment(ep, wa.segments[si].start, wa.segments[si].end, JUNCTION_TOL)) {
+            tjunctionsRaw.push(ep);
+          }
+        }
+      }
+
+      // Crossings (neither wire endpoint on the other)
       for (let sa = 0; sa < wa.segments.length; sa++) {
         for (let sb = 0; sb < wb.segments.length; sb++) {
           const pt = segmentIntersection(
@@ -119,14 +125,14 @@ export default function WireLayer({ wires, simResult }: Props) {
   }
 
   // Deduplicate junctions
-  const dedupPts = (pts: Pt[], tol = 5): Pt[] => {
+  const dedupPts = (pts: Pt[], tol = JUNCTION_TOL): Pt[] => {
     const out: Pt[] = [];
     pts.forEach(p => {
       if (!out.some(q => Math.abs(q.x - p.x) < tol && Math.abs(q.y - p.y) < tol)) out.push(p);
     });
     return out;
   };
-  const uniqueJunctions = dedupPts(tjunctions);
+  const uniqueJunctions = dedupPts(tjunctionsRaw);
   const uniqueCrossings = dedupPts(crossings.map(c => c.pt));
 
   const hopR = 7 / z;

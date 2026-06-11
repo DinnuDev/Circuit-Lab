@@ -2,40 +2,9 @@ import { useState, useCallback } from 'react';
 import { useCircuitStore } from '@/store/circuitStore';
 import { useUIStore } from '@/store/uiStore';
 import { COMPONENT_DEFINITIONS } from '@/data/componentLibrary';
+import { formatSI, parseSI, formatCurrent, formatPower, tempColorClass } from '@/utils/format';
 import { Trash2, RotateCw, FlipHorizontal, Copy, Zap, ChevronDown, ChevronRight } from 'lucide-react';
 import type { CircuitComponent } from '@/types';
-
-// ── SI formatting ─────────────────────────────────────────────
-function formatSI(value: number, unit: string): string {
-  if (!isFinite(value)) return `${value}${unit}`;
-  const abs = Math.abs(value);
-  if (abs === 0) return `0${unit}`;
-  if (abs >= 1e9)  return `${+(value / 1e9).toPrecision(4)}G${unit}`;
-  if (abs >= 1e6)  return `${+(value / 1e6).toPrecision(4)}M${unit}`;
-  if (abs >= 1e3)  return `${+(value / 1e3).toPrecision(4)}k${unit}`;
-  if (abs >= 1)    return `${+value.toPrecision(4)}${unit}`;
-  if (abs >= 1e-3) return `${+(value * 1e3).toPrecision(4)}m${unit}`;
-  if (abs >= 1e-6) return `${+(value * 1e6).toPrecision(4)}μ${unit}`;
-  if (abs >= 1e-9) return `${+(value * 1e9).toPrecision(4)}n${unit}`;
-  return `${+(value * 1e12).toPrecision(4)}p${unit}`;
-}
-
-function parseSI(raw: string): number {
-  const s = raw.trim().replace(/,/g, '');
-  const m = s.match(/^([+-]?\d*\.?\d+)\s*([GMkmunpμ]?)([^0-9]*)$/i);
-  if (!m) return parseFloat(s);
-  const num = parseFloat(m[1]);
-  const pfx: Record<string, number> = { G:1e9, M:1e6, k:1e3, K:1e3, m:1e-3, u:1e-6, μ:1e-6, n:1e-9, p:1e-12 };
-  return num * (pfx[m[2]] ?? 1);
-}
-
-// ── Colour helpers ────────────────────────────────────────────
-function tempColor(t: number) {
-  if (t > 85) return 'text-red-400';
-  if (t > 60) return 'text-orange-400';
-  if (t > 40) return 'text-yellow-400';
-  return 'text-emerald-400';
-}
 
 // ─────────────────────────────────────────────────────────────
 export default function PropertiesPanel() {
@@ -201,7 +170,7 @@ function ComponentProperties({ comp }: { comp: CircuitComponent }) {
           <SimReadout
             label="Temperature"
             value={`${simData.temperature.toFixed(1)} °C`}
-            accent={tempColor(simData.temperature)}
+            accent={tempColorClass(simData.temperature)}
           />
           {/* Power bar */}
           {comp.properties.powerRating && (
@@ -530,14 +499,6 @@ function PropField({ field, comp, onChange }: {
       )}
     </div>
   );
-}
-
-function formatCurrent(a: number): string {
-  return formatSI(a, 'A');
-}
-
-function formatPower(w: number): string {
-  return formatSI(w, 'W');
 }
 
 interface PropField {

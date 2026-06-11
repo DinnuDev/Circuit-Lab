@@ -7,6 +7,7 @@ import type {
   SelectionState, DragState,
 } from '@/types';
 import { COMPONENT_DEFINITIONS } from '@/data/componentLibrary';
+import { pinWorldPos, markDirty, markClean } from '@/utils/format';
 
 interface CircuitStore {
   // Current circuit
@@ -107,13 +108,14 @@ export const useCircuitStore = create<CircuitStore>()(
     selection: { componentIds: [], wireIds: [] },
     dragState: createEmptyDrag(),
 
-    loadCircuit: (circuit) => set(state => { state.circuit = circuit; }),
+    loadCircuit: (circuit) => set(state => { state.circuit = circuit; markClean(); }),
     newCircuit: () => set(state => {
       state.circuit = createEmptyCircuit();
       state.history = [];
       state.historyIndex = -1;
       state.simulationResult = null;
       state.selection = { componentIds: [], wireIds: [] };
+      markClean();
     }),
     setCircuitName: (name) => set(state => { state.circuit.name = name; }),
 
@@ -169,19 +171,10 @@ export const useCircuitStore = create<CircuitStore>()(
       const comp = state.circuit.components[id];
       if (!comp) return;
 
-      const pinWorld = (cx: number, cy: number, rot: number, px: number, py: number) => {
-        const rad = (rot * Math.PI) / 180;
-        return {
-          x: cx + px * Math.cos(rad) - py * Math.sin(rad),
-          y: cy + px * Math.sin(rad) + py * Math.cos(rad),
-        };
-      };
-
-      // Collect all wire IDs that need updating (avoid double-processing)
       const processedWires = new Set<string>();
 
       comp.pins.forEach(pin => {
-        const newPinW = pinWorld(position.x, position.y, comp.rotation, pin.position.x, pin.position.y);
+        const newPinW = pinWorldPos(position.x, position.y, comp.rotation, pin.position.x, pin.position.y);
 
         pin.connectedWireIds.forEach(wireId => {
           if (processedWires.has(wireId)) return;
@@ -191,55 +184,45 @@ export const useCircuitStore = create<CircuitStore>()(
           if (!wire || wire.segments.length === 0) return;
 
           const isFrom = wire.fromComponentId === id && wire.fromPinId === pin.id;
-          const isTo = wire.toComponentId === id && wire.toPinId === pin.id;
+          const isTo   = wire.toComponentId   === id && wire.toPinId   === pin.id;
 
           if (isFrom && isTo) {
-            // Self-loop: both ends on this component — recompute both
-            const toPin = comp.pins.find(p => p.id === wire.toPinId);
+            // Self-loop: both ends on this component
+            const toPin   = comp.pins.find(p => p.id === wire.toPinId);
             const fromPin = comp.pins.find(p => p.id === wire.fromPinId);
             if (fromPin && toPin) {
-              const fW = pinWorld(position.x, position.y, comp.rotation, fromPin.position.x, fromPin.position.y);
-              const tW = pinWorld(position.x, position.y, comp.rotation, toPin.position.x, toPin.position.y);
-              wire.segments = [{ start: fW, end: tW }];
+              wire.segments = [{
+                start: pinWorldPos(position.x, position.y, comp.rotation, fromPin.position.x, fromPin.position.y),
+                end:   pinWorldPos(position.x, position.y, comp.rotation, toPin.position.x,   toPin.position.y),
+              }];
             }
+            // Fall through so comp.position is still updated
             return;
           }
 
           if (isFrom) {
-            // This component is the FROM end — update start; resolve other end
             if (wire.toComponentId && wire.toPinId) {
               const otherComp = state.circuit.components[wire.toComponentId];
-              const otherPin = otherComp?.pins.find(p => p.id === wire.toPinId);
+              const otherPin  = otherComp?.pins.find(p => p.id === wire.toPinId);
               if (otherPin) {
-                const otherW = pinWorld(
-                  otherComp.position.x, otherComp.position.y, otherComp.rotation,
-                  otherPin.position.x, otherPin.position.y
-                );
-                // Replace all segments with a single direct segment
+                const otherW = pinWorldPos(otherComp.position.x, otherComp.position.y, otherComp.rotation, otherPin.position.x, otherPin.position.y);
                 wire.segments = [{ start: newPinW, end: otherW }];
                 return;
               }
             }
-            // Dangling wire — just move the start point
             wire.segments[0] = { ...wire.segments[0], start: newPinW };
           }
 
           if (isTo) {
-            // This component is the TO end — update end; resolve other end
             if (wire.fromComponentId && wire.fromPinId) {
               const otherComp = state.circuit.components[wire.fromComponentId];
-              const otherPin = otherComp?.pins.find(p => p.id === wire.fromPinId);
+              const otherPin  = otherComp?.pins.find(p => p.id === wire.fromPinId);
               if (otherPin) {
-                const otherW = pinWorld(
-                  otherComp.position.x, otherComp.position.y, otherComp.rotation,
-                  otherPin.position.x, otherPin.position.y
-                );
-                // Replace all segments with a single direct segment
+                const otherW = pinWorldPos(otherComp.position.x, otherComp.position.y, otherComp.rotation, otherPin.position.x, otherPin.position.y);
                 wire.segments = [{ start: otherW, end: newPinW }];
                 return;
               }
             }
-            // Dangling wire — just move the end point
             const last = wire.segments.length - 1;
             wire.segments[last] = { ...wire.segments[last], end: newPinW };
           }
@@ -247,25 +230,16 @@ export const useCircuitStore = create<CircuitStore>()(
       });
 
       comp.position = position;
+      markDirty();
     }),
 
     moveSelectedComponents: (dx, dy) => set(state => {
-      const pinWorld = (cx: number, cy: number, rot: number, px: number, py: number) => {
-        const rad = (rot * Math.PI) / 180;
-        return {
-          x: cx + px * Math.cos(rad) - py * Math.sin(rad),
-          y: cy + px * Math.sin(rad) + py * Math.cos(rad),
-        };
-      };
-
-      // Move all selected components first (positions)
       const newPositions = new Map<string, { x: number; y: number }>();
       Object.values(state.circuit.components).forEach(comp => {
         if (!comp.selected) return;
         newPositions.set(comp.id, { x: comp.position.x + dx, y: comp.position.y + dy });
       });
 
-      // Update wire segments
       const processedWires = new Set<string>();
       newPositions.forEach((newPos, compId) => {
         const comp = state.circuit.components[compId];
@@ -274,58 +248,53 @@ export const useCircuitStore = create<CircuitStore>()(
           pin.connectedWireIds.forEach(wireId => {
             if (processedWires.has(wireId)) return;
             processedWires.add(wireId);
-
             const wire = state.circuit.wires[wireId];
             if (!wire || wire.segments.length === 0) return;
 
-            // Determine from-pin world and to-pin world, using new positions for selected components
             let fromPinW: { x: number; y: number } | null = null;
-            let toPinW: { x: number; y: number } | null = null;
+            let toPinW:   { x: number; y: number } | null = null;
 
             if (wire.fromComponentId && wire.fromPinId) {
-              const fc = state.circuit.components[wire.fromComponentId];
-              if (fc) {
-                const fPos = newPositions.get(fc.id) ?? fc.position;
-                const fp = fc.pins.find(p => p.id === wire.fromPinId);
-                if (fp) fromPinW = pinWorld(fPos.x, fPos.y, fc.rotation, fp.position.x, fp.position.y);
-              }
+              const fc  = state.circuit.components[wire.fromComponentId];
+              const fPos = newPositions.get(wire.fromComponentId) ?? fc?.position;
+              const fp  = fc?.pins.find(p => p.id === wire.fromPinId);
+              if (fc && fPos && fp) fromPinW = pinWorldPos(fPos.x, fPos.y, fc.rotation, fp.position.x, fp.position.y);
             }
             if (wire.toComponentId && wire.toPinId) {
-              const tc = state.circuit.components[wire.toComponentId];
-              if (tc) {
-                const tPos = newPositions.get(tc.id) ?? tc.position;
-                const tp = tc.pins.find(p => p.id === wire.toPinId);
-                if (tp) toPinW = pinWorld(tPos.x, tPos.y, tc.rotation, tp.position.x, tp.position.y);
-              }
+              const tc  = state.circuit.components[wire.toComponentId];
+              const tPos = newPositions.get(wire.toComponentId) ?? tc?.position;
+              const tp  = tc?.pins.find(p => p.id === wire.toPinId);
+              if (tc && tPos && tp) toPinW = pinWorldPos(tPos.x, tPos.y, tc.rotation, tp.position.x, tp.position.y);
             }
 
-            if (fromPinW && toPinW) {
-              wire.segments = [{ start: fromPinW, end: toPinW }];
-            } else if (fromPinW) {
-              wire.segments[0] = { ...wire.segments[0], start: fromPinW };
-            } else if (toPinW) {
-              const last = wire.segments.length - 1;
-              wire.segments[last] = { ...wire.segments[last], end: toPinW };
-            }
+            if (fromPinW && toPinW) { wire.segments = [{ start: fromPinW, end: toPinW }]; }
+            else if (fromPinW) { wire.segments[0] = { ...wire.segments[0], start: fromPinW }; }
+            else if (toPinW)   { const last = wire.segments.length - 1; wire.segments[last] = { ...wire.segments[last], end: toPinW }; }
           });
         });
       });
 
-      // Apply new positions to components
-      newPositions.forEach((pos, id) => {
-        state.circuit.components[id].position = pos;
+      newPositions.forEach((pos, id) => { state.circuit.components[id].position = pos; });
+      markDirty();
+    }),
+
+    rotateComponent: (id, angle = 90) => {
+      set(state => {
+        const comp = state.circuit.components[id];
+        if (comp) comp.rotation = (comp.rotation + angle) % 360;
+        markDirty();
       });
-    }),
+      get().pushHistory();
+    },
 
-    rotateComponent: (id, angle = 90) => set(state => {
-      const comp = state.circuit.components[id];
-      if (comp) comp.rotation = (comp.rotation + angle) % 360;
-    }),
-
-    flipComponent: (id) => set(state => {
-      const comp = state.circuit.components[id];
-      if (comp) comp.flipped = !comp.flipped;
-    }),
+    flipComponent: (id) => {
+      set(state => {
+        const comp = state.circuit.components[id];
+        if (comp) comp.flipped = !comp.flipped;
+        markDirty();
+      });
+      get().pushHistory();
+    },
 
     updateComponentProperty: (id, key, value) => set(state => {
       const comp = state.circuit.components[id];
@@ -532,20 +501,28 @@ export const useCircuitStore = create<CircuitStore>()(
     zoomOut: () => set(state => { state.circuit.viewport.zoom = Math.max(0.05, state.circuit.viewport.zoom / 1.2); }),
     resetView: () => set(state => { state.circuit.viewport = { x: 0, y: 0, zoom: 1 }; }),
     fitToContent: () => {
-      const comps = Object.values(get().circuit.components);
+      const { circuit } = get();
+      const comps = Object.values(circuit.components);
       if (comps.length === 0) return;
+
       const xs = comps.map(c => c.position.x);
       const ys = comps.map(c => c.position.y);
-      const minX = Math.min(...xs) - 100;
-      const minY = Math.min(...ys) - 100;
-      const maxX = Math.max(...xs) + 100;
-      const maxY = Math.max(...ys) + 100;
-      const w = maxX - minX;
-      const h = maxY - minY;
-      const zoom = Math.min(1, 800 / w, 600 / h);
-      set(state => {
-        state.circuit.viewport = { x: -minX * zoom, y: -minY * zoom, zoom };
-      });
+      const pad = 120;
+      const minX = Math.min(...xs) - pad;
+      const minY = Math.min(...ys) - pad;
+      const maxX = Math.max(...xs) + pad;
+      const maxY = Math.max(...ys) + pad;
+      const cw = maxX - minX || 200;
+      const ch = maxY - minY || 200;
+
+      // Use window dimensions as fallback
+      const vw = window.innerWidth  - 400; // subtract sidebar widths
+      const vh = window.innerHeight - 80;  // subtract topbar + statusbar
+      const zoom = Math.min(1.5, vw / cw, vh / ch);
+      const x = (vw - cw * zoom) / 2 - minX * zoom;
+      const y = (vh - ch * zoom) / 2 - minY * zoom;
+
+      set(state => { state.circuit.viewport = { x, y, zoom: Math.max(0.1, zoom) }; });
     },
 
     setDragState: (drag) => set(state => { Object.assign(state.dragState, drag); }),

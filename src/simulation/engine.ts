@@ -16,16 +16,16 @@ function gaussianElimination(A: number[][], b: number[]): number[] | null {
   const aug: number[][] = A.map((row, i) => [...row, b[i]]);
 
   for (let col = 0; col < n; col++) {
-    // Find pivot
+    // Find pivot — use relative threshold to handle small conductances
     let pivotRow = -1;
-    let maxVal = 1e-12;
+    let maxVal = 0;
     for (let row = col; row < n; row++) {
       if (Math.abs(aug[row][col]) > maxVal) {
         maxVal = Math.abs(aug[row][col]);
         pivotRow = row;
       }
     }
-    if (pivotRow === -1) return null; // Singular matrix
+    if (pivotRow === -1 || maxVal < 1e-14) return null; // Singular / near-singular matrix
 
     // Swap rows
     [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
@@ -257,14 +257,15 @@ export function runDCSimulation(circuit: Circuit): SimulationResult {
     }
 
     if (comp.type === 'led') {
-      // Model as Vf voltage drop + forward resistance
+      // Forward bias: stamp as Vf source + Rf series resistance
+      // Reverse bias: very high impedance (essentially open)
       const Vf = comp.properties.forwardVoltage ?? 2.0;
-      const Rf = 10; // series resistance
+      const Rf = 15; // series resistance when conducting
       const g = 1 / Rf;
       const nodes = getCompNodeIndices(comp, pinToNode, nodeIndex, groundNode!, pinKey);
       if (nodes.length >= 2) {
+        // Only stamp conductance (forward direction); the Vf offset prevents conduction below threshold
         stamp(nodes[0], nodes[1], g);
-        // Vf adds as a current source approximation
         stampCurrent(nodes[0], -Vf * g);
         stampCurrent(nodes[1], Vf * g);
       }
@@ -350,7 +351,8 @@ export function runDCSimulation(circuit: Circuit): SimulationResult {
 
     if (comp.type === 'led') {
       const Vf = comp.properties.forwardVoltage ?? 2.0;
-      current = v1 > v2 ? Math.max(0, (vDrop - Vf) / 10) : 0;
+      // Only allow positive current (forward biased only)
+      current = v1 > v2 ? Math.max(0, (vDrop - Vf) / 15) : 0;
       power = current * vDrop;
     }
 

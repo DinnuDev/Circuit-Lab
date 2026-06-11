@@ -2,6 +2,7 @@ import { useCallback, useState, useRef } from 'react';
 import { useCircuitStore } from '@/store/circuitStore';
 import { useUIStore } from '@/store/uiStore';
 import { COMPONENT_DEFINITIONS } from '@/data/componentLibrary';
+import { formatSI } from '@/utils/format';
 import type { CircuitComponent, Point2D, SimulationResult } from '@/types';
 
 interface Props {
@@ -101,22 +102,22 @@ export default function SchematicComponent({
   const { x, y } = component.position;
   const transform = `translate(${x},${y}) rotate(${component.rotation}) ${component.flipped ? 'scale(-1,1)' : ''}`;
 
-  const strokeColor = hasError
-    ? '#ef4444'
-    : hasWarning
-    ? '#f59e0b'
-    : component.selected
-    ? '#60a5fa'
-    : hovered
-    ? '#cbd5e1'
-    : '#94a3b8';
-
+  const strokeColor = hasError ? '#ef4444' : hasWarning ? '#f59e0b'
+    : component.selected ? '#60a5fa' : hovered ? '#cbd5e1' : '#94a3b8';
   const strokeWidth = component.selected ? 2 : hovered ? 1.8 : 1.5;
 
-  // LED glow effect
   const isLEDOn = component.type === 'led' && simData && simData.current > 0.001;
   const ledColor = component.properties.color ?? '#ff0000';
   const showPinHandles = isDrawingWire || hovered;
+
+  // Thermal color: blue→green→yellow→orange→red based on temperature
+  const temp = simData?.temperature ?? 25;
+  const { showThermal } = useUIStore();
+  const thermalColor = temp > 85 ? 'rgba(239,68,68,0.3)'
+    : temp > 60 ? 'rgba(249,115,22,0.25)'
+    : temp > 40 ? 'rgba(234,179,8,0.18)'
+    : 'transparent';
+
   return (
     <g
       transform={transform}
@@ -126,13 +127,20 @@ export default function SchematicComponent({
       onContextMenu={e => onContextMenu(e, component.id)}
       style={{ cursor: isDragging ? 'grabbing' : isMultiSelected ? 'grab' : 'move' }}
     >
+      {/* Thermal overlay */}
+      {showThermal && simData && temp > 25 && (
+        <rect
+          x={def.boundingBox.x - 8} y={def.boundingBox.y - 8}
+          width={def.boundingBox.width + 16} height={def.boundingBox.height + 16}
+          rx={6} fill={thermalColor} style={{ pointerEvents: 'none' }}
+        />
+      )}
+
       {/* Hover / selection background */}
       {(hovered || component.selected) && (
         <rect
-          x={def.boundingBox.x - 6}
-          y={def.boundingBox.y - 6}
-          width={def.boundingBox.width + 12}
-          height={def.boundingBox.height + 12}
+          x={def.boundingBox.x - 6} y={def.boundingBox.y - 6}
+          width={def.boundingBox.width + 12} height={def.boundingBox.height + 12}
           rx={5}
           fill={component.selected ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.03)'}
           stroke={component.selected ? '#3b82f6' : 'rgba(255,255,255,0.08)'}
@@ -144,60 +152,37 @@ export default function SchematicComponent({
       {/* Error/Warning ring */}
       {(hasError || hasWarning) && (
         <rect
-          x={def.boundingBox.x - 5}
-          y={def.boundingBox.y - 5}
-          width={def.boundingBox.width + 10}
-          height={def.boundingBox.height + 10}
-          rx={4}
-          fill="none"
-          stroke={hasError ? '#ef4444' : '#f59e0b'}
-          strokeWidth={1.5}
-          opacity={0.7}
+          x={def.boundingBox.x - 5} y={def.boundingBox.y - 5}
+          width={def.boundingBox.width + 10} height={def.boundingBox.height + 10}
+          rx={4} fill="none" stroke={hasError ? '#ef4444' : '#f59e0b'}
+          strokeWidth={1.5} opacity={0.7}
         />
       )}
 
       {/* Component symbol */}
       <g
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        color={strokeColor}
+        fill="none" stroke={strokeColor} strokeWidth={strokeWidth}
+        strokeLinecap="round" strokeLinejoin="round" color={strokeColor}
         style={{ transition: 'stroke 0.1s, stroke-width 0.1s' }}
       >
-        {/* LED glow */}
-        {isLEDOn && (
-          <circle cx={0} cy={0} r={22} fill={ledColor} opacity={0.12} />
-        )}
+        {isLEDOn && <circle cx={0} cy={0} r={22} fill={ledColor} opacity={0.12} />}
         <g dangerouslySetInnerHTML={{ __html: def.symbol }} />
       </g>
 
       {/* Label */}
       {showLabels && (
-        <text
-          x={0}
-          y={def.boundingBox.y - 9}
-          textAnchor="middle"
-          fontSize={10}
+        <text x={0} y={def.boundingBox.y - 9} textAnchor="middle" fontSize={10}
           fill={hovered || component.selected ? '#cbd5e1' : '#64748b'}
-          fontFamily="'JetBrains Mono', monospace"
-          style={{ transition: 'fill 0.1s' }}
-        >
+          fontFamily="'JetBrains Mono', monospace" style={{ transition: 'fill 0.1s' }}>
           {component.label}
         </text>
       )}
 
       {/* Value */}
       {showValues && (
-        <text
-          x={0}
-          y={def.boundingBox.y + def.boundingBox.height + 16}
-          textAnchor="middle"
-          fontSize={9}
-          fill={hovered ? '#94a3b8' : '#374151'}
-          fontFamily="'JetBrains Mono', monospace"
-        >
+        <text x={0} y={def.boundingBox.y + def.boundingBox.height + 16}
+          textAnchor="middle" fontSize={9}
+          fill={hovered ? '#94a3b8' : '#374151'} fontFamily="'JetBrains Mono', monospace">
           {formatValue(component)}
         </text>
       )}
@@ -214,7 +199,15 @@ export default function SchematicComponent({
           {simData.current > 0.0001 && (
             <text x={def.boundingBox.x + def.boundingBox.width + 5} y={6}
               fontSize={8} fill="#3b82f6" fontFamily="monospace">
-              {formatCurrent(simData.current)}
+              {formatSI(simData.current, 'A')}
+            </text>
+          )}
+          {/* Thermal temperature badge */}
+          {showThermal && temp > 40 && (
+            <text x={def.boundingBox.x + def.boundingBox.width + 5} y={17}
+              fontSize={8} fill={temp > 85 ? '#ef4444' : temp > 60 ? '#f97316' : '#f59e0b'}
+              fontFamily="monospace">
+              {temp.toFixed(0)}°C
             </text>
           )}
         </g>
@@ -298,27 +291,9 @@ function PinHandle({
 
 function formatValue(comp: CircuitComponent): string {
   const p = comp.properties;
-  if (p.resistance !== undefined) return formatSI(p.resistance) + 'Ω';
-  if (p.capacitance !== undefined) return formatSI(p.capacitance) + 'F';
-  if (p.inductance !== undefined) return formatSI(p.inductance) + 'H';
-  if (p.voltage !== undefined) return `${p.voltage}V`;
+  if (p.inductance !== undefined)  return formatSI(p.inductance, 'H');
+  if (p.capacitance !== undefined) return formatSI(p.capacitance, 'F');
+  if (p.resistance !== undefined)  return formatSI(p.resistance, 'Ω');
+  if (p.voltage !== undefined)     return `${p.voltage}V`;
   return '';
-}
-
-function formatCurrent(a: number): string {
-  if (Math.abs(a) < 0.001) return `${(a * 1e6).toFixed(0)}μA`;
-  if (Math.abs(a) < 1) return `${(a * 1e3).toFixed(1)}mA`;
-  return `${a.toFixed(2)}A`;
-}
-
-function formatSI(value: number): string {
-  if (value >= 1e9) return `${(value / 1e9).toFixed(1)}G`;
-  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}k`;
-  if (value >= 1) return `${value}`;
-  if (value >= 1e-3) return `${(value * 1e3).toFixed(1)}m`;
-  if (value >= 1e-6) return `${(value * 1e6).toFixed(1)}μ`;
-  if (value >= 1e-9) return `${(value * 1e9).toFixed(1)}n`;
-  if (value >= 1e-12) return `${(value * 1e12).toFixed(1)}p`;
-  return `${value}`;
 }

@@ -3,6 +3,7 @@ import { useCircuitStore } from '@/store/circuitStore';
 import { useUIStore } from '@/store/uiStore';
 import { COMPONENT_DEFINITIONS, CATEGORY_META, searchComponents } from '@/data/componentLibrary';
 import { useDragContext } from '@/context/DragContext';
+import { formatSI } from '@/utils/format';
 import type { ComponentDefinition } from '@/types';
 import { Search, ChevronDown, Plus } from 'lucide-react';
 
@@ -269,24 +270,11 @@ function ComponentItem({
 
 function formatDefaultValue(def: ComponentDefinition): string {
   const p = def.defaultProperties;
-  // Order matters — inductance before resistance (inductor has both)
-  if (p.inductance !== undefined) return `${formatSI(p.inductance)}H`;
-  if (p.capacitance !== undefined) return `${formatSI(p.capacitance)}F`;
-  if (p.resistance !== undefined) return `${formatSI(p.resistance)}Ω`;
-  if (p.voltage !== undefined) return `${p.voltage}V`;
-  if (p.frequency !== undefined) return `${formatSI(p.frequency)}Hz`;
-  if (p.currentRating !== undefined) return `${formatSI(p.currentRating)}A max`;
+  if (p.inductance !== undefined)  return formatSI(p.inductance, 'H');
+  if (p.capacitance !== undefined) return formatSI(p.capacitance, 'F');
+  if (p.resistance !== undefined)  return formatSI(p.resistance, 'Ω');
+  if (p.voltage !== undefined)     return `${p.voltage}V`;
+  if (p.frequency !== undefined)   return formatSI(p.frequency, 'Hz');
+  if (p.currentRating !== undefined) return formatSI(p.currentRating, 'A max');
   return '';
-}
-
-function formatSI(value: number): string {
-  if (value >= 1e9) return `${(value / 1e9).toFixed(1)}G`;
-  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
-  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}k`;
-  if (value >= 1) return `${value}`;
-  if (value >= 1e-3) return `${(value * 1e3).toFixed(1)}m`;
-  if (value >= 1e-6) return `${(value * 1e6).toFixed(1)}μ`;
-  if (value >= 1e-9) return `${(value * 1e9).toFixed(1)}n`;
-  if (value >= 1e-12) return `${(value * 1e12).toFixed(1)}p`;
-  return `${value}`;
 }
